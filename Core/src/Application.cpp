@@ -10,6 +10,10 @@ Application* Application::s_Instance = nullptr;
 
 Application::Application()
 {
+	// 设置控制台输出为UTF-8编码
+	SetConsoleOutputCP(CP_UTF8);
+	SetConsoleCP(CP_UTF8);
+
 	m_Window = CreateScope<Window>();
 	m_Window->Init();
 }

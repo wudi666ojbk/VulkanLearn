@@ -80,10 +80,17 @@ void VulkanContext::Init()
 
 	// 实例化物理设备类
 	m_PhysicalDevice = VulkanPhysicalDevice::Create();
-	VkPhysicalDeviceFeatures deviceFeatures;
+	VkPhysicalDeviceFeatures enabledFeatures;
+	memset(&enabledFeatures, 0, sizeof(VkPhysicalDeviceFeatures));
+	enabledFeatures.samplerAnisotropy = true;
+	enabledFeatures.wideLines = true;
+	enabledFeatures.fillModeNonSolid = true;
+	enabledFeatures.independentBlend = true;
+	enabledFeatures.pipelineStatisticsQuery = true;
+	enabledFeatures.shaderStorageImageReadWithoutFormat = true;
 
 	// 实例化逻辑设备类
-	m_Device = CreateRef<VulkanDevice>(m_PhysicalDevice, deviceFeatures);
+	m_Device = CreateRef<VulkanDevice>(m_PhysicalDevice, enabledFeatures);
 }
 
 bool VulkanContext::CheckValidationLayerSupport() {

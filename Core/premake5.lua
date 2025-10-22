@@ -1,5 +1,5 @@
 project "Core"
-	kind "WindowedApp"
+	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++23"
 	

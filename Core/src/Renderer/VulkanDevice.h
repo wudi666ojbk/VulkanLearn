@@ -19,8 +19,16 @@ public:
 	bool IsDeviceSuitable(VkPhysicalDevice device);
 
 	VkPhysicalDevice GetVulkanPhysicalDevice() const { return m_PhysicalDevice; }
+	const QueueFamilyIndices& GetQueueFamilyIndices() const { return m_QueueFamilyIndices; }
+private:
+	QueueFamilyIndices GetQueueFamilyIndices(int queueFlags);
 private:
 	VkPhysicalDevice m_PhysicalDevice = nullptr;
+	VkPhysicalDeviceProperties m_Properties;
+
+	QueueFamilyIndices m_QueueFamilyIndices;
+	std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
+	std::vector<VkDeviceQueueCreateInfo> m_QueueCreateInfos;
 
 	friend class VulkanDevice;
 };
@@ -36,6 +44,9 @@ public:
 	VulkanDevice(const Ref<VulkanPhysicalDevice>& physicalDevice, VkPhysicalDeviceFeatures enabledFeatures);			// 创建逻辑设备
 	~VulkanDevice();
 
+	void Destroy();
+
+	const Ref<VulkanPhysicalDevice>& GetPhysicalDevice() const { return m_PhysicalDevice; }
 	VkDevice GetVulkanDevice() const { return m_LogicalDevice; }
 private:
 	VkDevice m_LogicalDevice = nullptr;

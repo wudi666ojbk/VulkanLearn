@@ -24,6 +24,8 @@ void Window::Init()
 
 void Window::Shutdown()
 {
+	m_RendererContext->GetDevice()->Destroy();
+
 	glfwDestroyWindow(m_Window);
 	glfwTerminate();
 }
