@@ -20,10 +20,17 @@ void Window::Init()
 	// 创建渲染上下文
 	m_RendererContext = VulkanContext::Create();
 	m_RendererContext->Init();
+
+	m_SwapChain = new VulkanSwapChain();
+	m_SwapChain->Init(VulkanContext::GetInstance(), m_RendererContext->GetDevice());
+	m_SwapChain->InitSurface(m_Window);
 }
 
 void Window::Shutdown()
 {
+	m_SwapChain->Destroy();
+	delete m_SwapChain;
+
 	m_RendererContext->GetDevice()->Destroy();
 
 	glfwDestroyWindow(m_Window);

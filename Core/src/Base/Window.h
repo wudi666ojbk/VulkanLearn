@@ -28,9 +28,13 @@ public:
 
 	GLFWwindow* GetNativeWindow() const { return m_Window; }
 
+	// Vulkan
 	virtual Ref<VulkanContext> GetRenderContext() { return m_RendererContext; }
+	VulkanSwapChain& GetSwapChain() { return *m_SwapChain; }
 private:
 	GLFWwindow* m_Window;
 
 	Ref<VulkanContext> m_RendererContext;
+
+	VulkanSwapChain* m_SwapChain;
 };

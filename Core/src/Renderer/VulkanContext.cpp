@@ -80,6 +80,8 @@ void VulkanContext::Init()
 
 	// 实例化物理设备类
 	m_PhysicalDevice = VulkanPhysicalDevice::Create();
+
+	// 实例化逻辑设备类
 	VkPhysicalDeviceFeatures enabledFeatures;
 	memset(&enabledFeatures, 0, sizeof(VkPhysicalDeviceFeatures));
 	enabledFeatures.samplerAnisotropy = true;
@@ -88,8 +90,6 @@ void VulkanContext::Init()
 	enabledFeatures.independentBlend = true;
 	enabledFeatures.pipelineStatisticsQuery = true;
 	enabledFeatures.shaderStorageImageReadWithoutFormat = true;
-
-	// 实例化逻辑设备类
 	m_Device = CreateRef<VulkanDevice>(m_PhysicalDevice, enabledFeatures);
 }
 
