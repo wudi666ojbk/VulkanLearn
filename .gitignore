@@ -1,0 +1,24 @@
+# 编译文件
+**/bin/
+/bin/
+bin-int/
+# Log files
+**.log
+
+# shader cach
+**.spv
+
+
+.vs/
+.vscode/
+**.sln
+**.vcxproj
+**.vcxproj.filters
+**.vcxproj.user
+**.csproj
+**.nsight-gfxproj
+**.DotSettings
+**.user
+
+# 第三方
+vendor/
