@@ -74,9 +74,8 @@ void VulkanContext::Init()
 	// 创建Vulkan实例
 	VK_CHECK_RESULT(vkCreateInstance(&createInfo, nullptr, &s_VulkanInstance))
 
-	if (enableValidationLayers) {
+	if (enableValidationLayers) 
 		VulkanDebug::CreateDebugUtilsMessengerEXT(s_VulkanInstance, &debugCreateInfo, nullptr, &m_DebugUtilsMessenger);
-	}
 
 	// 实例化物理设备类
 	m_PhysicalDevice = VulkanPhysicalDevice::Create();

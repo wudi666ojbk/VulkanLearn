@@ -5,9 +5,10 @@ VulkanPhysicalDevice::VulkanPhysicalDevice()
 {
     auto instance = VulkanContext::GetInstance();
 
+	// 列出扩展
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-    if (deviceCount == 0) throw std::runtime_error("failed to find GPUs with Vulkan support!");
+    CORE_ASSERT(deviceCount != 0, "failed to find GPUs with Vulkan support!")
     std::vector<VkPhysicalDevice> physicalDevices(deviceCount); 
     VK_CHECK_RESULT(vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data()))
 
@@ -38,6 +39,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice()
     m_QueueFamilyProperties.resize(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, m_QueueFamilyProperties.data());
 
+	EnumerateSupportedExtensions();
     // 队列族
     // 所需的队列需要在创建逻辑设备时请求
     // 由于不同 Vulkan 实现的队列族配置可能不同，这个过程可能会有些复杂，尤其是当应用程序
@@ -65,12 +67,12 @@ Ref<VulkanPhysicalDevice> VulkanPhysicalDevice::Create()
 	return CreateRef<VulkanPhysicalDevice>();
 }
 
-bool VulkanPhysicalDevice::IsDeviceSuitable(VkPhysicalDevice physicaldevice)
+bool VulkanPhysicalDevice::IsExtensionSupported(const std::string& extensionName) const
 {
-    return true;
+	return m_SupportedExtensions.find(extensionName) != m_SupportedExtensions.end();
 }
 
-VulkanPhysicalDevice::QueueFamilyIndices VulkanPhysicalDevice::GetQueueFamilyIndices(int flags)
+QueueFamilyIndices VulkanPhysicalDevice::GetQueueFamilyIndices(int flags)
 {
 	QueueFamilyIndices indices;
 
@@ -129,9 +131,36 @@ VulkanPhysicalDevice::QueueFamilyIndices VulkanPhysicalDevice::GetQueueFamilyInd
 	return indices;
 }
 
+void VulkanPhysicalDevice::EnumerateSupportedExtensions()
+{
+	uint32_t extCount = 0;
+	vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &extCount, nullptr);
+	if (extCount > 0)
+	{
+		std::vector<VkExtensionProperties> extensions(extCount);
+		if (vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &extCount, &extensions.front()) == VK_SUCCESS)
+		{
+			for (const auto& ext : extensions)
+			{
+				m_SupportedExtensions.emplace(ext.extensionName);
+			}
+		}
+	}
+}
+
 VulkanDevice::VulkanDevice(const Ref<VulkanPhysicalDevice>& physicalDevice, VkPhysicalDeviceFeatures enabledFeatures)
 	: m_PhysicalDevice(physicalDevice), m_EnabledFeatures(enabledFeatures)
 {
+	// Do we need to enable any other extensions (eg. NV_RAYTRACING?)
+	std::vector<const char*> deviceExtensions;
+	// 如果设备将用于通过交换链（swapchain）向显示器呈现内容，我们需要请求交换链扩展。
+	CORE_ASSERT(m_PhysicalDevice->IsExtensionSupported(VK_KHR_SWAPCHAIN_EXTENSION_NAME), "Swapchain extension not supported!");
+	deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+	if (m_PhysicalDevice->IsExtensionSupported(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME))
+		deviceExtensions.push_back(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
+	if (m_PhysicalDevice->IsExtensionSupported(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME))
+		deviceExtensions.push_back(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME);
+
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(physicalDevice->m_QueueCreateInfos.size());;
