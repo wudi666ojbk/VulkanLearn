@@ -14,10 +14,10 @@ public:
 	void InitSurface(GLFWwindow* windowHandle);
 
 	void Destroy();
-
 	// 成员获取
 private:
 	void FindImageFormatAndColorSpace();   // 找到适合的颜色格式和色彩空间
+	void CreateImageViews();				// 创建图像视图
 private:
 	VkInstance m_Instance = nullptr;
 	Ref<VulkanDevice> m_Device;
@@ -26,6 +26,13 @@ private:
 	VkSwapchainKHR m_SwapChain;
 	uint32_t m_ImageCount = 0;
 	std::vector<VkImage> m_VulkanImages;
+
+	struct SwapchainImage
+	{
+		VkImage Image = nullptr;
+		VkImageView ImageView = nullptr;
+	};
+	std::vector<SwapchainImage> m_Images;
 
 	VkFormat m_ColorFormat;
 	VkColorSpaceKHR m_ColorSpace;

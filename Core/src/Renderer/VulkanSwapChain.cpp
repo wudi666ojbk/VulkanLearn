@@ -77,36 +77,33 @@ void VulkanSwapChain::Create(uint32_t* width, uint32_t* height)
 	preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 
 	// 交换链创建信息
-	VkSwapchainCreateInfoKHR createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	createInfo.surface = m_Surface;
-	createInfo.minImageCount = imageCount;
-	createInfo.imageFormat = m_ColorFormat;
-	createInfo.imageColorSpace = m_ColorSpace;;
-	createInfo.imageExtent = { m_SwapChainExtent.width, m_SwapChainExtent.height };
+	VkSwapchainCreateInfoKHR swapchainCI = {};
+	swapchainCI.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	swapchainCI.surface = m_Surface;
+	swapchainCI.minImageCount = imageCount;
+	swapchainCI.imageFormat = m_ColorFormat;
+	swapchainCI.imageColorSpace = m_ColorSpace;;
+	swapchainCI.imageExtent = { m_SwapChainExtent.width, m_SwapChainExtent.height };
 	// 指定交换链图像的数组层数（除非开发立体3D应用，否则总是1）
-	createInfo.imageArrayLayers = 1;
-	createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	createInfo.queueFamilyIndexCount = 0;
-	createInfo.pQueueFamilyIndices = NULL;
+	swapchainCI.imageArrayLayers = 1;
+	swapchainCI.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	swapchainCI.queueFamilyIndexCount = 0;
+	swapchainCI.pQueueFamilyIndices = NULL;
 	// 指定交换链图像的用途（直接渲染到这些图像上）
-	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	// 指定变换（这里使用默认变换）
-	createInfo.preTransform = (VkSurfaceTransformFlagBitsKHR)preTransform;
+	swapchainCI.preTransform = (VkSurfaceTransformFlagBitsKHR)preTransform;
 	// 指定alpha通道（这里设置为不透明）
-	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	swapchainCI.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	// 使用之前选择的呈现模式
-	createInfo.presentMode = swapchainPresentMode;
+	swapchainCI.presentMode = swapchainPresentMode;
 	// 允许裁剪（隐藏的像素不需要更新）
-	createInfo.clipped = VK_TRUE;
-	createInfo.oldSwapchain = VK_NULL_HANDLE;
+	swapchainCI.clipped = VK_TRUE;
+	swapchainCI.oldSwapchain = VK_NULL_HANDLE;
 
-	vkCreateSwapchainKHR(device, &createInfo, nullptr, &m_SwapChain);
+	vkCreateSwapchainKHR(device, &swapchainCI, nullptr, &m_SwapChain);
 
-	// 获取交换链图像
-	vkGetSwapchainImagesKHR(device, m_SwapChain, &m_ImageCount, nullptr);
-	m_VulkanImages.resize(m_ImageCount);
-	vkGetSwapchainImagesKHR(device, m_SwapChain, &m_ImageCount, m_VulkanImages.data());
+	CreateImageViews();
 }
 
 void VulkanSwapChain::Init(VkInstance instance, const Ref<VulkanDevice>& device)
@@ -131,6 +128,9 @@ void VulkanSwapChain::Destroy()
 	auto device = m_Device->GetVulkanDevice();
 	vkDeviceWaitIdle(device);
 
+	for (auto imageView : m_Images)
+		vkDestroyImageView(m_Device->GetVulkanDevice(), imageView.ImageView, nullptr);
+
 	vkDestroySwapchainKHR(device, m_SwapChain, nullptr);
 	vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 
@@ -151,4 +151,45 @@ void VulkanSwapChain::FindImageFormatAndColorSpace()
 	// 则没有首选格式，所以我们假设 VK_FORMAT_B8G8R8A8_UNORM
 	m_ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	m_ColorSpace = surfaceFormats[0].colorSpace;
+}
+
+void VulkanSwapChain::CreateImageViews()
+{
+	VkDevice device = m_Device->GetVulkanDevice();
+
+	// 获取交换链图像
+	vkGetSwapchainImagesKHR(device, m_SwapChain, &m_ImageCount, nullptr);
+	m_VulkanImages.resize(m_ImageCount);
+	vkGetSwapchainImagesKHR(device, m_SwapChain, &m_ImageCount, m_VulkanImages.data());
+
+	// 获取包含图像和图像视图的交换链缓冲区
+	m_Images.resize(m_ImageCount);
+
+	for (uint32_t i = 0; i < m_ImageCount; i++)
+	{
+		VkImageViewCreateInfo colorAttachmentView = {};
+		colorAttachmentView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		colorAttachmentView.image = m_VulkanImages[i];
+
+		// 指定图像类型（2D纹理）
+		colorAttachmentView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		// 使用交换链图像格式
+		colorAttachmentView.format = m_ColorFormat;
+
+		// 指定颜色通道映射（默认的RGBA映射）
+		colorAttachmentView.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		colorAttachmentView.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		colorAttachmentView.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		colorAttachmentView.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+		// 指定图像子资源范围
+		colorAttachmentView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		colorAttachmentView.subresourceRange.baseMipLevel = 0;
+		colorAttachmentView.subresourceRange.levelCount = 1;
+		colorAttachmentView.subresourceRange.baseArrayLayer = 0;
+		colorAttachmentView.subresourceRange.layerCount = 1;
+
+		m_Images[i].Image = m_VulkanImages[i];
+		vkCreateImageView(device, &colorAttachmentView, nullptr, &m_Images[i].ImageView);
+	}
 }
