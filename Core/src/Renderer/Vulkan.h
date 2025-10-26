@@ -8,4 +8,7 @@
 	VulkanCheckResult(res, __FILE__, __LINE__);\
 }
 
+inline std::string VKResultToString(VkResult result);
+
 void VulkanCheckResult(VkResult result, const char* file, int line);
+void VulkanCheckResult(VkResult result);
