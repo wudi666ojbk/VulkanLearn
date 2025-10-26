@@ -24,6 +24,7 @@ project "Core"
 	includedirs
 	{
 		"src",
+		"../vendor/spdlog",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.VulkanSDK}"

@@ -9,7 +9,10 @@ workspace "VulkanLearn"
 		"Debug",
 		"Release",
 	}
-	
+	defines
+	{
+		"SPDLOG_USE_STD_FORMAT",
+	}
 	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"

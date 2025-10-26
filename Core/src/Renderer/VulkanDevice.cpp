@@ -8,7 +8,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice()
 	// 列出扩展
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-    CORE_ASSERT(deviceCount != 0, "failed to find GPUs with Vulkan support!")
+	CORE_ASSERT(deviceCount != 0, "failed to find GPUs with Vulkan support!");
     std::vector<VkPhysicalDevice> physicalDevices(deviceCount); 
     VK_CHECK_RESULT(vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data()))
 
@@ -38,6 +38,8 @@ VulkanPhysicalDevice::VulkanPhysicalDevice()
 	CORE_ASSERT(queueFamilyCount != 0, "Physical device has no queue families!");
     m_QueueFamilyProperties.resize(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, m_QueueFamilyProperties.data());
+
+	CORE_INFO("Selected physical device: {0}", m_Properties.deviceName);
 
 	EnumerateSupportedExtensions();
     // 队列族

@@ -14,6 +14,9 @@ Application::Application()
 	SetConsoleOutputCP(CP_UTF8);
 	SetConsoleCP(CP_UTF8);
 
+	// 初始化日志系统
+	Log::Init();
+
 	m_Window = CreateScope<Window>();
 	m_Window->Init();
 }
