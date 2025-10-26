@@ -15,7 +15,11 @@ void Window::Init()
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 	WindowProps props("VulkanLearn");
-	m_Window = glfwCreateWindow(props.Width, props.Height, props.Title.c_str(), nullptr, nullptr);
+
+	uint32_t width = props.Width;
+	uint32_t height = props.Height;
+
+	m_Window = glfwCreateWindow(width, height, props.Title.c_str(), nullptr, nullptr);
 
 	// 创建渲染上下文
 	m_RendererContext = VulkanContext::Create();
@@ -24,6 +28,7 @@ void Window::Init()
 	m_SwapChain = new VulkanSwapChain();
 	m_SwapChain->Init(VulkanContext::GetInstance(), m_RendererContext->GetDevice());
 	m_SwapChain->InitSurface(m_Window);
+	m_SwapChain->Create(&width, &height);
 }
 
 void Window::Shutdown()

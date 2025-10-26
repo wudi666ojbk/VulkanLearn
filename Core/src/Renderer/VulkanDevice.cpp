@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "VulkanDevice.h"
 #include "VulkanContext.h"
+
 VulkanPhysicalDevice::VulkanPhysicalDevice()
 {
     auto instance = VulkanContext::GetInstance();
@@ -153,11 +154,12 @@ void VulkanPhysicalDevice::EnumerateSupportedExtensions()
 VulkanDevice::VulkanDevice(const Ref<VulkanPhysicalDevice>& physicalDevice, VkPhysicalDeviceFeatures enabledFeatures)
 	: m_PhysicalDevice(physicalDevice), m_EnabledFeatures(enabledFeatures)
 {
-	// Do we need to enable any other extensions (eg. NV_RAYTRACING?)
 	std::vector<const char*> deviceExtensions;
 	// 如果设备将用于通过交换链（swapchain）向显示器呈现内容，我们需要请求交换链扩展。
-	CORE_ASSERT(m_PhysicalDevice->IsExtensionSupported(VK_KHR_SWAPCHAIN_EXTENSION_NAME), "Swapchain extension not supported!");
+	CORE_ASSERT(m_PhysicalDevice->IsExtensionSupported(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
 	deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+	// 设备诊断扩展
 	if (m_PhysicalDevice->IsExtensionSupported(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME))
 		deviceExtensions.push_back(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
 	if (m_PhysicalDevice->IsExtensionSupported(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME))
@@ -168,6 +170,8 @@ VulkanDevice::VulkanDevice(const Ref<VulkanPhysicalDevice>& physicalDevice, VkPh
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(physicalDevice->m_QueueCreateInfos.size());;
 	createInfo.pQueueCreateInfos = physicalDevice->m_QueueCreateInfos.data();
 	createInfo.pEnabledFeatures = &enabledFeatures;
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 	VK_CHECK_RESULT(vkCreateDevice(m_PhysicalDevice->GetVulkanPhysicalDevice(), &createInfo, nullptr, &m_LogicalDevice));
 	

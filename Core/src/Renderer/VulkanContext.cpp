@@ -49,15 +49,14 @@ void VulkanContext::Init()
 	std::vector<const char*> instanceExtensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-	if (enableValidationLayers) {
-		if (!CheckValidationLayerSupport()) {
-			throw std::runtime_error("validation layers requested, but not available!");
-		}
+	if (enableValidationLayers) 
+	{
+		CORE_ASSERT(CheckValidationLayerSupport(), "validation layers requested, but not available!");
 
 		instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 		
 		VulkanDebug::PopulateDebugMessengerCreateInfo(debugCreateInfo);
-		debugCreateInfo.pNext = nullptr;
 
 		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 		createInfo.ppEnabledLayerNames = validationLayers.data();
