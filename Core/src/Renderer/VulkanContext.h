@@ -20,6 +20,7 @@ public:
 
 	static VkInstance GetInstance() { return s_VulkanInstance; }
 	Ref<VulkanDevice> GetDevice() const { return m_Device; }
+	VkDevice GetCurrentDevice() const { return m_Device->GetVulkanDevice(); }
 	Ref<VulkanPhysicalDevice> GetPhysicalDevice() const { return m_PhysicalDevice; }
 private:
 	bool CheckValidationLayerSupport();

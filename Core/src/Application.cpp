@@ -6,6 +6,7 @@
 
 #include "Renderer/VulkanContext.h"
 #include "Renderer/VulkanShader.h"
+#include "Renderer/VulkanPipline.h"
 
 Application* Application::s_Instance = nullptr;
 
@@ -23,6 +24,7 @@ Application::Application()
 	m_Window->Init();
 
 	VulkanShader::Init();
+	VulkanPipline::Create();
 }
 
 Application::~Application()
