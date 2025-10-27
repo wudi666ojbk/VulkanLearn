@@ -105,6 +105,7 @@ void VulkanSwapChain::Create(uint32_t* width, uint32_t* height)
 
 	CreateImageViews();
 	CreateRenderPass();
+	CreateFramebuffers();
 }
 
 void VulkanSwapChain::Init(VkInstance instance, const Ref<VulkanDevice>& device)
@@ -129,10 +130,13 @@ void VulkanSwapChain::Destroy()
 	auto device = m_Device->GetVulkanDevice();
 	vkDeviceWaitIdle(device);
 
-	vkDestroyRenderPass(device, m_RenderPass, nullptr);
+	for (auto framebuffer : m_Framebuffers)
+		vkDestroyFramebuffer(device, framebuffer, nullptr);
+
 	for (auto &imageView : m_Images)
 		vkDestroyImageView(m_Device->GetVulkanDevice(), imageView.ImageView, nullptr);
 
+	vkDestroyRenderPass(device, m_RenderPass, nullptr);
 	vkDestroySwapchainKHR(device, m_SwapChain, nullptr);
 	vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 
@@ -226,4 +230,26 @@ void VulkanSwapChain::CreateRenderPass()
 	renderPassInfo.pSubpasses = &subpass;
 
 	VK_CHECK_RESULT(vkCreateRenderPass(m_Device->GetVulkanDevice(), &renderPassInfo, nullptr, &m_RenderPass));
+}
+
+void VulkanSwapChain::CreateFramebuffers()
+{
+	m_Framebuffers.resize(m_ImageCount);
+
+	for (size_t i = 0; i < m_ImageCount; i++) {
+		VkImageView attachments[] = {
+			m_Images[i].ImageView
+		};
+
+		VkFramebufferCreateInfo framebufferInfo{};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = m_RenderPass;
+		framebufferInfo.attachmentCount = 1;
+		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.width = m_SwapChainExtent.width;
+		framebufferInfo.height = m_SwapChainExtent.height;
+		framebufferInfo.layers = 1;
+
+		VK_CHECK_RESULT(vkCreateFramebuffer(m_Device->GetVulkanDevice(), &framebufferInfo, nullptr, &m_Framebuffers[i]));
+	}
 }

@@ -33,9 +33,8 @@ VulkanShader::~VulkanShader()
     auto device = VulkanContext::Get()->GetCurrentDevice();
 
     for (auto shaderModule : m_PipelineShaderStageCreateInfos)
-    {
         vkDestroyShaderModule(device, shaderModule.module, nullptr);
-    }
+    m_PipelineShaderStageCreateInfos.clear();
 }
 
 Ref<VulkanShader> VulkanShader::Init()

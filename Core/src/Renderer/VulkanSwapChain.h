@@ -20,7 +20,8 @@ public:
 private:
 	void FindImageFormatAndColorSpace();	// 找到适合的颜色格式和色彩空间
 	void CreateImageViews();				// 创建图像视图
-	void CreateRenderPass();
+	void CreateRenderPass();				// 创建渲染Pass
+	void CreateFramebuffers();				// 创建帧缓冲区
 private:
 	// Vulkan实例
 	VkInstance m_Instance = nullptr;
@@ -56,6 +57,9 @@ private:
 
 	// Vulkan表面
 	VkSurfaceKHR m_Surface;
+
+	// 帧缓冲区
+	std::vector<VkFramebuffer> m_Framebuffers;
 
 	// 允许VulkanContext访问私有成员
 	friend class VulkanContext;
