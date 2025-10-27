@@ -37,11 +37,6 @@ private:
 	friend class VulkanDevice;
 };
 
-class VulkanCommandPool
-{
-
-};
-
 class VulkanDevice
 {
 public:

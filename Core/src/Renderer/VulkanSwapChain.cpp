@@ -128,7 +128,7 @@ void VulkanSwapChain::Destroy()
 	auto device = m_Device->GetVulkanDevice();
 	vkDeviceWaitIdle(device);
 
-	for (auto imageView : m_Images)
+	for (auto &imageView : m_Images)
 		vkDestroyImageView(m_Device->GetVulkanDevice(), imageView.ImageView, nullptr);
 
 	vkDestroySwapchainKHR(device, m_SwapChain, nullptr);

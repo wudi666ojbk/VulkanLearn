@@ -5,11 +5,13 @@
 #include <GLFW/glfw3.h>
 
 #include "Renderer/VulkanContext.h"
+#include "Renderer/VulkanShader.h"
 
 Application* Application::s_Instance = nullptr;
 
 Application::Application()
 {
+	s_Instance = this;
 	// 设置控制台输出为UTF-8编码
 	SetConsoleOutputCP(CP_UTF8);
 	SetConsoleCP(CP_UTF8);
@@ -19,6 +21,8 @@ Application::Application()
 
 	m_Window = CreateScope<Window>();
 	m_Window->Init();
+
+	VulkanShader::Init();
 }
 
 Application::~Application()
