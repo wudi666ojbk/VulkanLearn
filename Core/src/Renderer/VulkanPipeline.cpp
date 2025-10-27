@@ -1,10 +1,25 @@
 #include "pch.h"
-#include "VulkanPipline.h"
+#include "VulkanPipeline.h"
 
 #include "Renderer/VulkanContext.h"
 
-VulkanPipline::VulkanPipline()
+VulkanPipeline::VulkanPipeline(Ref<VulkanShader> shader, VulkanSwapChain* swapChain)
+	: m_Shader(shader), m_SwapChain(swapChain)
 {
+	Invalidate();
+}
+
+VulkanPipeline::~VulkanPipeline()
+{
+	auto device = VulkanContext::Get()->GetCurrentDevice();
+
+	vkDestroyPipelineLayout(device, m_PipelineLayout, nullptr);
+	vkDestroyPipeline(device, m_Pipeline, nullptr);
+}
+
+void VulkanPipeline::Invalidate()
+{
+	auto device = VulkanContext::Get()->GetCurrentDevice();
 	// 启用动态状态
 	// 大多数状态都已烘焙到管线中，但仍然有一些动态状态可以在命令缓冲区中更改
 	// 为了能够更改这些状态，我们需要指定使用此管线将要更改的动态状态。它们的实际状态将在命令缓冲区中稍后设置。
@@ -74,6 +89,17 @@ VulkanPipline::VulkanPipline()
 	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
 	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
 	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+	// 颜色混合状态描述如何混合图元的颜色
+	VkPipelineColorBlendStateCreateInfo colorBlending{};
+	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlending.logicOpEnable = VK_FALSE;
+	colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+	colorBlending.attachmentCount = 1;
+	colorBlending.pAttachments = &colorBlendAttachment;
+	colorBlending.blendConstants[0] = 0.0f; // Optional
+	colorBlending.blendConstants[1] = 0.0f; // Optional
+	colorBlending.blendConstants[2] = 0.0f; // Optional
+	colorBlending.blendConstants[3] = 0.0f; // Optional
 
 	// 管线布局
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -84,16 +110,35 @@ VulkanPipline::VulkanPipline()
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
 	VK_CHECK_RESULT(vkCreatePipelineLayout(VulkanContext::Get()->GetCurrentDevice(), &pipelineLayoutInfo, nullptr, &m_PipelineLayout));
+
+	VulkanPipeline* instance = this;
+	const auto& shaderStages = m_Shader->GetPipelineShaderStageCreateInfos();
+
+	VkGraphicsPipelineCreateInfo pipelineInfo = {};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
+	pipelineInfo.pStages = shaderStages.data();
+
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssembly;
+	pipelineInfo.pViewportState = &viewportState;
+	pipelineInfo.pRasterizationState = &rasterizer;
+	pipelineInfo.pMultisampleState = &multisampling;
+	pipelineInfo.pDepthStencilState = nullptr; // Optional
+	pipelineInfo.pColorBlendState = &colorBlending;
+	pipelineInfo.pDynamicState = &dynamicState;
+	pipelineInfo.layout = m_PipelineLayout;
+
+	pipelineInfo.renderPass = m_SwapChain->GetRenderPass();
+	pipelineInfo.subpass = 0;
+
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
+	pipelineInfo.basePipelineIndex = -1; // Optional
+
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline));
 }
 
-VulkanPipline::~VulkanPipline()
+Ref<VulkanPipeline> VulkanPipeline::Create(Ref<VulkanShader> shader, VulkanSwapChain* swapChain)
 {
-	auto device = VulkanContext::Get()->GetCurrentDevice();
-
-	vkDestroyPipelineLayout(device, m_PipelineLayout, nullptr);
-}
-
-Ref<VulkanPipline> VulkanPipline::Create()
-{
-	return CreateRef<VulkanPipline>();
+	return CreateRef<VulkanPipeline>(shader, swapChain);
 }

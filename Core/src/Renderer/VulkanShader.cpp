@@ -8,21 +8,39 @@
 VulkanShader::VulkanShader(const std::string& vertShaderPath, const std::string& fragShaderPath)
 {
     // 在构造函数中调用ReadShader来读取和编译着色器
-    m_VertShaderModule = ReadShader(vertShaderPath, 0); // 0表示顶点着色器
-    m_FragShaderModule = ReadShader(fragShaderPath, 1); // 1表示片段着色器
+    auto vertShaderModule = ReadShader(vertShaderPath, 0); // 0表示顶点着色器
+    auto fragShaderModule = ReadShader(fragShaderPath, 1); // 1表示片段着色器
 
     auto device = VulkanContext::Get()->GetDevice()->GetVulkanDevice();
-    vkDestroyShaderModule(device, m_VertShaderModule, nullptr);
-    vkDestroyShaderModule(device, m_FragShaderModule, nullptr);
+
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertShaderStageInfo.module = vertShaderModule;
+    vertShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragShaderStageInfo.module = fragShaderModule;
+    fragShaderStageInfo.pName = "main";
+
+    m_PipelineShaderStageCreateInfos = {vertShaderStageInfo, fragShaderStageInfo};
 }
 
 VulkanShader::~VulkanShader()
 {
+    auto device = VulkanContext::Get()->GetCurrentDevice();
+
+    for (auto shaderModule : m_PipelineShaderStageCreateInfos)
+    {
+        vkDestroyShaderModule(device, shaderModule.module, nullptr);
+    }
 }
 
-void VulkanShader::Init()
+Ref<VulkanShader> VulkanShader::Init()
 {
-    auto shader = CreateRef<VulkanShader>("Shaders/shader.vert", "Shaders/shader.frag");
+    return CreateRef<VulkanShader>("Shaders/shader.vert", "Shaders/shader.frag");
 }
 
 VkShaderModule VulkanShader::CreateShaderModule(const std::vector<char>& code)

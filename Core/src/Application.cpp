@@ -6,7 +6,7 @@
 
 #include "Renderer/VulkanContext.h"
 #include "Renderer/VulkanShader.h"
-#include "Renderer/VulkanPipline.h"
+#include "Renderer/VulkanPipeline.h"
 
 Application* Application::s_Instance = nullptr;
 
@@ -23,8 +23,9 @@ Application::Application()
 	m_Window = CreateScope<Window>();
 	m_Window->Init();
 
-	VulkanShader::Init();
-	VulkanPipline::Create();
+	auto& swap = m_Window->GetSwapChain();
+	auto shader = VulkanShader::Init();
+	VulkanPipeline::Create(shader, &swap);
 }
 
 Application::~Application()
