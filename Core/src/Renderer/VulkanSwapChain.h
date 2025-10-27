@@ -19,9 +19,13 @@ public:
 	VkRenderPass GetRenderPass() { return m_RenderPass; }
 private:
 	void FindImageFormatAndColorSpace();	// 找到适合的颜色格式和色彩空间
+	// 获取支持的队列
+	void GetQueueNodeIndex();
+
 	void CreateImageViews();				// 创建图像视图
 	void CreateRenderPass();				// 创建渲染Pass
 	void CreateFramebuffers();				// 创建帧缓冲区
+	void CreateCommandBuffers();			// 创建命令缓冲区
 private:
 	// Vulkan实例
 	VkInstance m_Instance = nullptr;
@@ -47,6 +51,15 @@ private:
 		VkImageView ImageView = nullptr;
 	};
 	std::vector<SwapchainImage> m_Images;
+
+	// 命令缓冲区
+	struct SwapchainCommandBuffer
+	{
+		VkCommandPool CommandPool = nullptr;
+		VkCommandBuffer CommandBuffer = nullptr;
+	};
+	std::vector<SwapchainCommandBuffer> m_CommandBuffers;
+	uint32_t m_QueueNodeIndex = UINT32_MAX;
 
 	// 交换链颜色格式和颜色空间
 	VkFormat m_ColorFormat;

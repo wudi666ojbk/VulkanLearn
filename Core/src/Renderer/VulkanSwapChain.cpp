@@ -106,6 +106,7 @@ void VulkanSwapChain::Create(uint32_t* width, uint32_t* height)
 	CreateImageViews();
 	CreateRenderPass();
 	CreateFramebuffers();
+	CreateCommandBuffers();
 }
 
 void VulkanSwapChain::Init(VkInstance instance, const Ref<VulkanDevice>& device)
@@ -122,6 +123,7 @@ void VulkanSwapChain::InitSurface(GLFWwindow* windowHandle)
 
 	glfwCreateWindowSurface(m_Instance, windowHandle, nullptr, &m_Surface);
 
+	GetQueueNodeIndex();
 	FindImageFormatAndColorSpace();
 }
 
@@ -130,11 +132,15 @@ void VulkanSwapChain::Destroy()
 	auto device = m_Device->GetVulkanDevice();
 	vkDeviceWaitIdle(device);
 
-	for (auto framebuffer : m_Framebuffers)
-		vkDestroyFramebuffer(device, framebuffer, nullptr);
-
 	for (auto &imageView : m_Images)
 		vkDestroyImageView(m_Device->GetVulkanDevice(), imageView.ImageView, nullptr);
+	m_Images.clear();
+	for (auto& commandBuffer : m_CommandBuffers)
+		vkDestroyCommandPool(device, commandBuffer.CommandPool, nullptr);
+	m_CommandBuffers.clear();
+	for (auto framebuffer : m_Framebuffers)
+		vkDestroyFramebuffer(device, framebuffer, nullptr);
+	m_Framebuffers.clear();
 
 	vkDestroyRenderPass(device, m_RenderPass, nullptr);
 	vkDestroySwapchainKHR(device, m_SwapChain, nullptr);
@@ -157,6 +163,68 @@ void VulkanSwapChain::FindImageFormatAndColorSpace()
 	// 则没有首选格式，所以我们假设 VK_FORMAT_B8G8R8A8_UNORM
 	m_ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	m_ColorSpace = surfaceFormats[0].colorSpace;
+}
+
+void VulkanSwapChain::GetQueueNodeIndex()
+{
+	auto physicalDevice = m_Device->GetPhysicalDevice()->GetVulkanPhysicalDevice();
+
+	// 获取可用队列族属性
+	uint32_t queueCount;
+	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, NULL);
+	CORE_ASSERT(queueCount >= 1);
+
+	std::vector<VkQueueFamilyProperties> queueProps(queueCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, queueProps.data());
+
+	// 遍历每个队列以了解它是否支持呈现：
+	// 找到一个支持呈现的队列
+	// 将用于将交换链图像呈现给窗口系统
+	std::vector<VkBool32> supportsPresent(queueCount);
+	for (uint32_t i = 0; i < queueCount; i++)
+	{
+		vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, m_Surface, &supportsPresent[i]);
+	}
+
+	// 在队列族数组中搜索图形队列和呈现队列
+	// 尝试找到一个同时支持两者队列
+	uint32_t graphicsQueueNodeIndex = UINT32_MAX;
+	uint32_t presentQueueNodeIndex = UINT32_MAX;
+	for (uint32_t i = 0; i < queueCount; i++)
+	{
+		if ((queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+		{
+			if (graphicsQueueNodeIndex == UINT32_MAX)
+			{
+				graphicsQueueNodeIndex = i;
+			}
+
+			if (supportsPresent[i] == VK_TRUE)
+			{
+				graphicsQueueNodeIndex = i;
+				presentQueueNodeIndex = i;
+				break;
+			}
+		}
+	}
+	if (presentQueueNodeIndex == UINT32_MAX)
+	{
+		// 如果没有一个队列同时支持呈现和图形
+		// 尝试找到一个单独的呈现队列
+		for (uint32_t i = 0; i < queueCount; ++i)
+		{
+			if (supportsPresent[i] == VK_TRUE)
+			{
+				presentQueueNodeIndex = i;
+				break;
+			}
+		}
+	}
+
+	CORE_ASSERT(graphicsQueueNodeIndex != UINT32_MAX);
+	CORE_ASSERT(presentQueueNodeIndex != UINT32_MAX);
+
+	m_QueueNodeIndex = graphicsQueueNodeIndex;
 }
 
 void VulkanSwapChain::CreateImageViews()
@@ -252,4 +320,40 @@ void VulkanSwapChain::CreateFramebuffers()
 
 		VK_CHECK_RESULT(vkCreateFramebuffer(m_Device->GetVulkanDevice(), &framebufferInfo, nullptr, &m_Framebuffers[i]));
 	}
+}
+
+void VulkanSwapChain::CreateCommandBuffers()
+{
+	auto device = m_Device->GetVulkanDevice();
+
+	for (auto& commandBuffer : m_CommandBuffers)
+		vkDestroyCommandPool(device, commandBuffer.CommandPool, nullptr);
+
+	VkCommandPoolCreateInfo cmdPoolInfo = {};
+	cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+	cmdPoolInfo.queueFamilyIndex = m_QueueNodeIndex;
+
+	VkCommandBufferAllocateInfo commandBufferAllocateInfo{};
+	commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	commandBufferAllocateInfo.commandBufferCount = 1;
+
+	m_CommandBuffers.resize(m_ImageCount);
+	for (auto& commandBuffer : m_CommandBuffers)
+	{
+		VK_CHECK_RESULT(vkCreateCommandPool(device, &cmdPoolInfo, nullptr, &commandBuffer.CommandPool));
+
+		commandBufferAllocateInfo.commandPool = commandBuffer.CommandPool;
+		VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer.CommandBuffer));
+	}
+
+	// Record command buffer
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = 0; // Optional
+	beginInfo.pInheritanceInfo = nullptr; // Optional
+
+	for (auto& commandBuffer : m_CommandBuffers)
+		vkBeginCommandBuffer(commandBuffer.CommandBuffer, &beginInfo);
 }
