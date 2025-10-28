@@ -17,6 +17,7 @@ public:
 	void Init();
 
 	static Ref<VulkanContext> Get();
+	VulkanSwapChain& GetSwapChain() const;
 
 	static VkInstance GetInstance() { return s_VulkanInstance; }
 	Ref<VulkanDevice> GetDevice() const { return m_Device; }

@@ -17,6 +17,14 @@ public:
 
 	// 成员获取
 	VkRenderPass GetRenderPass() { return m_RenderPass; }
+	VkExtent2D GetSwapChainExtent() { return m_SwapChainExtent; }
+
+	// TODO: m_ImageCount临时用于获取当前帧缓冲区，后续需要修改
+	VkFramebuffer GetCurrentFramebuffer() { return GetFramebuffer(m_ImageCount - 1); }
+	VkFramebuffer GetFramebuffer(uint32_t index) { return m_Framebuffers[index]; }
+
+	VkCommandBuffer GetCurrentDrawCommandBuffer() { return GetDrawCommandBuffer(m_ImageCount - 1); }
+	VkCommandBuffer GetDrawCommandBuffer(uint32_t index) { return m_CommandBuffers[index].CommandBuffer; }
 private:
 	void FindImageFormatAndColorSpace();	// 找到适合的颜色格式和色彩空间
 	// 获取支持的队列
@@ -32,6 +40,8 @@ private:
 
 	// Vulkan渲染通道
 	VkRenderPass m_RenderPass = nullptr;    // 用于屏幕渲染的RenderPass
+	uint32_t m_CurrentFrameIndex = 0;		// 当前正在处理的帧的索引，最多飞行帧数
+	uint32_t m_CurrentImageIndex = 0;		// 当前交换链图像的索引。 可能与帧索引不同
 
 	// Vulkan设备
 	Ref<VulkanDevice> m_Device;

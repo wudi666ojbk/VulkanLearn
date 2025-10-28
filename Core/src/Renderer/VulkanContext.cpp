@@ -120,3 +120,8 @@ Ref<VulkanContext> VulkanContext::Get()
 {
 	return Application::Get().GetWindow().GetRenderContext();
 }
+
+VulkanSwapChain& VulkanContext::GetSwapChain() const
+{
+	return Application::Get().GetWindow().GetSwapChain();
+}
