@@ -60,12 +60,60 @@ void VulkanSwapChain::Destroy()
 	vkDeviceWaitIdle(device);
 }
 
-void VulkanSwapChain::DrawFrame()
+void VulkanSwapChain::BeginFrame()
 {
+	m_CurrentImageIndex = AcquireNextImage();
+	VK_CHECK_RESULT(vkResetCommandPool(m_Device->GetVulkanDevice(), m_CommandBuffers[m_CurrentFrameIndex].CommandPool, 0));
 }
 
 void VulkanSwapChain::Present()
 {
+	const uint64_t DEFAULT_FENCE_TIMEOUT = 100000000000;
+
+	VkPipelineStageFlags waitStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.pWaitDstStageMask = &waitStageMask;
+	submitInfo.pWaitSemaphores = &m_ImageAvailableSemaphores[m_CurrentFrameIndex];
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = &m_RenderFinishedSemaphores[m_CurrentFrameIndex];
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pCommandBuffers = &m_CommandBuffers[m_CurrentFrameIndex].CommandBuffer;
+	submitInfo.commandBufferCount = 1;
+
+	VK_CHECK_RESULT(vkResetFences(m_Device->GetVulkanDevice(), 1, &m_WaitFences[m_CurrentFrameIndex]));
+
+	VK_CHECK_RESULT(vkQueueSubmit(m_Device->GetGraphicsQueue(), 1, &submitInfo, m_WaitFences[m_CurrentFrameIndex]));
+
+	// 将当前缓冲区呈现给交换链
+	// 传递从提交信息中被命令缓冲提交信号的信号量作为交换链呈现的等待信号量
+	// 这确保图像不会在所有命令提交之前呈现给窗口系统
+	VkResult result;
+	{
+		VkPresentInfoKHR presentInfo = {};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.pNext = NULL;
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = &m_SwapChain;
+		presentInfo.pImageIndices = &m_CurrentImageIndex;
+
+		presentInfo.pWaitSemaphores = &m_RenderFinishedSemaphores[m_CurrentFrameIndex];
+		presentInfo.waitSemaphoreCount = 1;
+		result = vkQueuePresentKHR(m_Device->GetGraphicsQueue(), &presentInfo);
+	}
+
+	if (result != VK_SUCCESS)
+	{
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+		{
+			OnResize(m_Width, m_Height);
+		}
+		else
+		{
+			VK_CHECK_RESULT(result);
+		}
+	}
 }
 
 void VulkanSwapChain::OnResize(uint32_t width, uint32_t height)
@@ -346,6 +394,15 @@ void VulkanSwapChain::CreateRenderPass()
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
 
+	// 子通道依赖关系
+	VkSubpassDependency dependency{};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 	VkRenderPassCreateInfo renderPassInfo{};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount = 1;
@@ -403,22 +460,13 @@ void VulkanSwapChain::CreateCommandBuffers()
 		commandBufferAllocateInfo.commandPool = commandBuffer.CommandPool;
 		VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer.CommandBuffer));
 	}
-
-	// Record command buffer
-	VkCommandBufferBeginInfo beginInfo{};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = 0; // Optional
-	beginInfo.pInheritanceInfo = nullptr; // Optional
-
-	for (auto& commandBuffer : m_CommandBuffers)
-		vkBeginCommandBuffer(commandBuffer.CommandBuffer, &beginInfo);
 }
 
 void VulkanSwapChain::CreateSyncObjects()
 {
 	auto device = m_Device->GetVulkanDevice();
 
-	uint32_t framesInFlight = 3;
+	uint32_t framesInFlight = MAX_FRAMES_IN_FLIGHT;
 	if (m_ImageAvailableSemaphores.size() != framesInFlight)
 	{
 		m_ImageAvailableSemaphores.resize(framesInFlight);
@@ -429,6 +477,19 @@ void VulkanSwapChain::CreateSyncObjects()
 		{
 			VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &m_ImageAvailableSemaphores[i]));
 			VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &m_RenderFinishedSemaphores[i]));
+		}
+	}
+
+	if (m_WaitFences.size() != framesInFlight)
+	{
+		VkFenceCreateInfo fenceCreateInfo{};
+		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		m_WaitFences.resize(framesInFlight);
+		for (auto& fence : m_WaitFences)
+		{
+			VK_CHECK_RESULT(vkCreateFence(m_Device->GetVulkanDevice(), &fenceCreateInfo, nullptr, &fence));
 		}
 	}
 }

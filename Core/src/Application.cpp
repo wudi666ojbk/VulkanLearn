@@ -26,8 +26,10 @@ Application::Application()
 
 	auto& swap = m_Window->GetSwapChain();
 	auto shader = VulkanShader::Init();
+	auto device = VulkanContext::Get()->GetCurrentDevice();
 	Ref <VulkanPipeline> pipeline = VulkanPipeline::Create(shader, &swap);
-	VulkanRenderer::BeginRenderPass(pipeline);
+	m_Renderer = CreateScope<VulkanRenderer>();
+	m_Renderer->Init(pipeline);
 }
 
 Application::~Application()
@@ -38,9 +40,11 @@ void Application::Run()
 {
 	while (!glfwWindowShouldClose(m_Window->GetNativeWindow()))
 	{
-		m_Window->GetSwapChain().DrawFrame();
+		m_Renderer->DrawFrame();
         glfwPollEvents();
 	}
+
+	vkDeviceWaitIdle(VulkanContext::Get()->GetCurrentDevice());
 }
 
 void Application::Close()

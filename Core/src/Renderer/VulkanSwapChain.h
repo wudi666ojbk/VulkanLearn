@@ -15,7 +15,7 @@ public:
 
 	void Destroy();
 
-	void DrawFrame();
+	void BeginFrame();
 	void Present();
 
 	void OnResize(uint32_t width, uint32_t height);
@@ -45,6 +45,8 @@ private:
 private:
 	// Vulkan实例
 	VkInstance m_Instance = nullptr;
+
+	static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3;
 
 	// Vulkan渲染通道
 	VkRenderPass m_RenderPass = nullptr;    // 用于屏幕渲染的RenderPass

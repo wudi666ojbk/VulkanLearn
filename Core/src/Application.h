@@ -2,6 +2,8 @@
 #include "Base/Base.h"
 #include <vulkan/vulkan.h>
 
+#include "Renderer/VulkanRenderer.h"
+
 #include "Base/Window.h"
 
 class Application
@@ -19,6 +21,7 @@ private:
 	static Application* s_Instance;
 
 	Scope<Window> m_Window;
+	Scope<VulkanRenderer> m_Renderer;
 
 	bool m_Running = true;
 };
