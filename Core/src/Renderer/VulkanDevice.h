@@ -45,11 +45,15 @@ public:
 
 	void Destroy();
 
+	VkQueue GetGraphicsQueue() { return m_GraphicsQueue; }
+
 	const Ref<VulkanPhysicalDevice>& GetPhysicalDevice() const { return m_PhysicalDevice; }
 	VkDevice GetVulkanDevice() const { return m_LogicalDevice; }
 private:
 	VkDevice m_LogicalDevice = nullptr;
 	Ref<VulkanPhysicalDevice> m_PhysicalDevice;
 	VkPhysicalDeviceFeatures m_EnabledFeatures;
+
+	VkQueue m_GraphicsQueue;
 };
 

@@ -15,25 +15,33 @@ public:
 
 	void Destroy();
 
+	void DrawFrame();
+	void Present();
+
+	void OnResize(uint32_t width, uint32_t height);
+
 	// 成员获取
 	VkRenderPass GetRenderPass() { return m_RenderPass; }
 	VkExtent2D GetSwapChainExtent() { return m_SwapChainExtent; }
 
 	// TODO: m_ImageCount临时用于获取当前帧缓冲区，后续需要修改
-	VkFramebuffer GetCurrentFramebuffer() { return GetFramebuffer(m_ImageCount - 1); }
+	VkFramebuffer GetCurrentFramebuffer() { return GetFramebuffer(m_CurrentImageIndex); }
 	VkFramebuffer GetFramebuffer(uint32_t index) { return m_Framebuffers[index]; }
 
-	VkCommandBuffer GetCurrentDrawCommandBuffer() { return GetDrawCommandBuffer(m_ImageCount - 1); }
+	VkCommandBuffer GetCurrentDrawCommandBuffer() { return GetDrawCommandBuffer(m_CurrentFrameIndex); }
 	VkCommandBuffer GetDrawCommandBuffer(uint32_t index) { return m_CommandBuffers[index].CommandBuffer; }
 private:
+	uint32_t AcquireNextImage();			// 获取下一个可用的图像索引
 	void FindImageFormatAndColorSpace();	// 找到适合的颜色格式和色彩空间
 	// 获取支持的队列
 	void GetQueueNodeIndex();
 
+	void CreateSwapChain(uint32_t* width, uint32_t* height);
 	void CreateImageViews();				// 创建图像视图
 	void CreateRenderPass();				// 创建渲染Pass
 	void CreateFramebuffers();				// 创建帧缓冲区
 	void CreateCommandBuffers();			// 创建命令缓冲区
+	void CreateSyncObjects();				// 创建同步对象
 private:
 	// Vulkan实例
 	VkInstance m_Instance = nullptr;
@@ -54,6 +62,9 @@ private:
 	uint32_t m_ImageCount = 0;
 	std::vector<VkImage> m_VulkanImages;
 
+	// 交换链图像范围
+	uint32_t m_Width = 0, m_Height = 0;
+
 	// 交换链图像结构体
 	struct SwapchainImage
 	{
@@ -61,6 +72,12 @@ private:
 		VkImageView ImageView = nullptr;
 	};
 	std::vector<SwapchainImage> m_Images;
+
+	// Semaphores to signal that images are available for rendering and that rendering has finished (one pair for each frame in flight)
+	std::vector<VkSemaphore> m_ImageAvailableSemaphores;
+	std::vector<VkSemaphore> m_RenderFinishedSemaphores;
+	// Fences to signal that command buffers are ready to be reused (one for each frame in flight)
+	std::vector<VkFence> m_WaitFences;
 
 	// 命令缓冲区
 	struct SwapchainCommandBuffer

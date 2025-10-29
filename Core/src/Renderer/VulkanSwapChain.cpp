@@ -3,110 +3,12 @@
 
 void VulkanSwapChain::Create(uint32_t* width, uint32_t* height)
 {
-	VkDevice device = m_Device->GetVulkanDevice();
-	VkPhysicalDevice physicalDevice = m_Device->GetPhysicalDevice()->GetVulkanPhysicalDevice();
-
-	// 创建交换链需要以下类型的设置
-	// 1.表面格式（颜色深度）
-	// 2.呈现模式（将图像“交换”到屏幕的条件）
-	// 3.交换范围（交换链中图像的分辨率）
-
-	// 获取支持的表面格式列表
-	VkSurfaceCapabilitiesKHR surfCaps;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, m_Surface, &surfCaps);
-
-	// 设置交换链分辨率
-	if (surfCaps.currentExtent.width == (uint32_t)-1)
-	{
-		// 如果表面大小未定义，则大小设置为请求的图像大小
-		m_SwapChainExtent.width = *width;
-		m_SwapChainExtent.height = *height;
-	}
-	else
-	{
-		// 如果表面大小已定义，则交换链大小必须匹配
-		m_SwapChainExtent = surfCaps.currentExtent;
-		*width = surfCaps.currentExtent.width;
-		*height = surfCaps.currentExtent.height;
-	}
-
-	// 获取可用的呈现模式
-	uint32_t presentModeCount;
-	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, m_Surface, &presentModeCount, nullptr);
-	CORE_ASSERT(presentModeCount > 0);
-	std::vector<VkPresentModeKHR> presentModes(presentModeCount);
-	VK_CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, m_Surface, &presentModeCount, presentModes.data()));
-
-	// 为交换链选择一个呈现模式
-	// VK_PRESENT_MODE_FIFO_KHR：
-	// 交换链是一个队列，显示器会在刷新时从队列的前面获取图像，程序会将渲染的图像插入队列的后面。 
-	// 如果队列已满，则程序必须等待。 这与现代游戏中发现的垂直同步最相似。 显示器刷新的时刻称为“垂直消隐”。
-
-	// VK_PRESENT_MODE_FIFO_RELAXED_KHR：
-	// 如果应用程序迟到且队列在上次垂直消隐时为空，则此模式与前一种模式的区别仅在于此。
-	// 当图像最终到达时，它会立即传输，而不是等待下一个垂直消隐。 这可能会导致明显的撕裂。
-
-	// VK_PRESENT_MODE_MAILBOX_KHR：
-	// 这是第二种模式的另一种变体。 当队列已满时，不是阻塞应用程序，而是简单地将已排队的图像替换为较新的图像。
-	// 此模式可用于尽可能快地渲染帧，同时仍避免撕裂，从而导致比标准垂直同步更少的延迟问题。 
-	// 这通常被称为“三重缓冲”，尽管仅存在三个缓冲区并不一定意味着帧率已解锁。
-	VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-	for (size_t i = 0; i < presentModeCount; i++)
-	{
-		if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
-		{
-			swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-			break;
-		}
-		if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) && (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR))
-		{
-			swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-		}
-	}
-
-
-	// 确定图像数量
-	uint32_t imageCount = surfCaps.minImageCount + 1;
-	if ((surfCaps.maxImageCount > 0) && (imageCount > surfCaps.maxImageCount))
-	{
-		imageCount = surfCaps.maxImageCount;
-	}
-
-	// 查找表面的变换
-	VkSurfaceTransformFlagsKHR preTransform;
-	preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-
-	// 交换链创建信息
-	VkSwapchainCreateInfoKHR swapchainCI = {};
-	swapchainCI.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	swapchainCI.surface = m_Surface;
-	swapchainCI.minImageCount = imageCount;
-	swapchainCI.imageFormat = m_ColorFormat;
-	swapchainCI.imageColorSpace = m_ColorSpace;;
-	swapchainCI.imageExtent = { m_SwapChainExtent.width, m_SwapChainExtent.height };
-	// 指定交换链图像的数组层数（除非开发立体3D应用，否则总是1）
-	swapchainCI.imageArrayLayers = 1;
-	swapchainCI.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	swapchainCI.queueFamilyIndexCount = 0;
-	swapchainCI.pQueueFamilyIndices = NULL;
-	// 指定交换链图像的用途（直接渲染到这些图像上）
-	swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	// 指定变换（这里使用默认变换）
-	swapchainCI.preTransform = (VkSurfaceTransformFlagBitsKHR)preTransform;
-	// 指定alpha通道（这里设置为不透明）
-	swapchainCI.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	// 使用之前选择的呈现模式
-	swapchainCI.presentMode = swapchainPresentMode;
-	// 允许裁剪（隐藏的像素不需要更新）
-	swapchainCI.clipped = VK_TRUE;
-	swapchainCI.oldSwapchain = VK_NULL_HANDLE;
-
-	vkCreateSwapchainKHR(device, &swapchainCI, nullptr, &m_SwapChain);
-
+	CreateSwapChain(width, height);
 	CreateImageViews();
 	CreateRenderPass();
 	CreateFramebuffers();
 	CreateCommandBuffers();
+	CreateSyncObjects();
 }
 
 void VulkanSwapChain::Init(VkInstance instance, const Ref<VulkanDevice>& device)
@@ -141,12 +43,60 @@ void VulkanSwapChain::Destroy()
 	for (auto framebuffer : m_Framebuffers)
 		vkDestroyFramebuffer(device, framebuffer, nullptr);
 	m_Framebuffers.clear();
+	for (auto& fence : m_WaitFences)
+		vkDestroyFence(device, fence, nullptr);
+	m_WaitFences.clear();
+	for (auto& semaphore : m_ImageAvailableSemaphores)
+		vkDestroySemaphore(device, semaphore, nullptr);
+	m_ImageAvailableSemaphores.clear();
+	for (auto& semaphore : m_RenderFinishedSemaphores)
+		vkDestroySemaphore(device, semaphore, nullptr);
+	m_RenderFinishedSemaphores.clear();
 
 	vkDestroyRenderPass(device, m_RenderPass, nullptr);
 	vkDestroySwapchainKHR(device, m_SwapChain, nullptr);
 	vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 
 	vkDeviceWaitIdle(device);
+}
+
+void VulkanSwapChain::DrawFrame()
+{
+}
+
+void VulkanSwapChain::Present()
+{
+}
+
+void VulkanSwapChain::OnResize(uint32_t width, uint32_t height)
+{
+	auto device = m_Device->GetVulkanDevice();
+
+	vkDeviceWaitIdle(device);
+	Create(&width, &height);
+	vkDeviceWaitIdle(device);
+}
+
+uint32_t VulkanSwapChain::AcquireNextImage()
+{
+	m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % 3;
+	auto device = m_Device->GetVulkanDevice();
+
+	// 检查上一帧是否已准备好
+	VK_CHECK_RESULT(vkWaitForFences(m_Device->GetVulkanDevice(), 1, &m_WaitFences[m_CurrentFrameIndex], VK_TRUE, UINT64_MAX));
+
+	uint32_t imageIndex;
+	VkResult result = vkAcquireNextImageKHR(m_Device->GetVulkanDevice(), m_SwapChain, UINT64_MAX, m_ImageAvailableSemaphores[m_CurrentFrameIndex], (VkFence)nullptr, &imageIndex);
+	if (result != VK_SUCCESS)
+	{
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+		{
+			OnResize(m_Width, m_Height);
+			VK_CHECK_RESULT(vkAcquireNextImageKHR(m_Device->GetVulkanDevice(), m_SwapChain, UINT64_MAX, m_ImageAvailableSemaphores[m_CurrentFrameIndex], (VkFence)nullptr, &imageIndex));
+		}
+	}
+
+	return imageIndex;
 }
 
 void VulkanSwapChain::FindImageFormatAndColorSpace()
@@ -225,6 +175,112 @@ void VulkanSwapChain::GetQueueNodeIndex()
 	CORE_ASSERT(presentQueueNodeIndex != UINT32_MAX);
 
 	m_QueueNodeIndex = graphicsQueueNodeIndex;
+}
+
+void VulkanSwapChain::CreateSwapChain(uint32_t* width, uint32_t* height)
+{
+	VkDevice device = m_Device->GetVulkanDevice();
+	VkPhysicalDevice physicalDevice = m_Device->GetPhysicalDevice()->GetVulkanPhysicalDevice();
+
+	// 创建交换链需要以下类型的设置
+	// 1.表面格式（颜色深度）
+	// 2.呈现模式（将图像“交换”到屏幕的条件）
+	// 3.交换范围（交换链中图像的分辨率）
+
+	// 获取支持的表面格式列表
+	VkSurfaceCapabilitiesKHR surfCaps;
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, m_Surface, &surfCaps);
+
+	// 设置交换链分辨率
+	if (surfCaps.currentExtent.width == (uint32_t)-1)
+	{
+		// 如果表面大小未定义，则大小设置为请求的图像大小
+		m_SwapChainExtent.width = *width;
+		m_SwapChainExtent.height = *height;
+	}
+	else
+	{
+		// 如果表面大小已定义，则交换链大小必须匹配
+		m_SwapChainExtent = surfCaps.currentExtent;
+		*width = surfCaps.currentExtent.width;
+		*height = surfCaps.currentExtent.height;
+	}
+	m_Width = *width;
+	m_Height = *height;
+
+	// 获取可用的呈现模式
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, m_Surface, &presentModeCount, nullptr);
+	CORE_ASSERT(presentModeCount > 0);
+	std::vector<VkPresentModeKHR> presentModes(presentModeCount);
+	VK_CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, m_Surface, &presentModeCount, presentModes.data()));
+
+	// 为交换链选择一个呈现模式
+	// VK_PRESENT_MODE_FIFO_KHR：
+	// 交换链是一个队列，显示器会在刷新时从队列的前面获取图像，程序会将渲染的图像插入队列的后面。 
+	// 如果队列已满，则程序必须等待。 这与现代游戏中发现的垂直同步最相似。 显示器刷新的时刻称为“垂直消隐”。
+
+	// VK_PRESENT_MODE_FIFO_RELAXED_KHR：
+	// 如果应用程序迟到且队列在上次垂直消隐时为空，则此模式与前一种模式的区别仅在于此。
+	// 当图像最终到达时，它会立即传输，而不是等待下一个垂直消隐。 这可能会导致明显的撕裂。
+
+	// VK_PRESENT_MODE_MAILBOX_KHR：
+	// 这是第二种模式的另一种变体。 当队列已满时，不是阻塞应用程序，而是简单地将已排队的图像替换为较新的图像。
+	// 此模式可用于尽可能快地渲染帧，同时仍避免撕裂，从而导致比标准垂直同步更少的延迟问题。 
+	// 这通常被称为“三重缓冲”，尽管仅存在三个缓冲区并不一定意味着帧率已解锁。
+	VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+	for (size_t i = 0; i < presentModeCount; i++)
+	{
+		if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+		{
+			swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+			break;
+		}
+		if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) && (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR))
+		{
+			swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+		}
+	}
+
+
+	// 确定图像数量
+	uint32_t imageCount = surfCaps.minImageCount + 1;
+	if ((surfCaps.maxImageCount > 0) && (imageCount > surfCaps.maxImageCount))
+	{
+		imageCount = surfCaps.maxImageCount;
+	}
+
+	// 查找表面的变换
+	VkSurfaceTransformFlagsKHR preTransform;
+	preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+
+	// 交换链创建信息
+	VkSwapchainCreateInfoKHR swapchainCI = {};
+	swapchainCI.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	swapchainCI.surface = m_Surface;
+	swapchainCI.minImageCount = imageCount;
+	swapchainCI.imageFormat = m_ColorFormat;
+	swapchainCI.imageColorSpace = m_ColorSpace;;
+	swapchainCI.imageExtent = { m_SwapChainExtent.width, m_SwapChainExtent.height };
+	// 指定交换链图像的数组层数（除非开发立体3D应用，否则总是1）
+	swapchainCI.imageArrayLayers = 1;
+	swapchainCI.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	swapchainCI.queueFamilyIndexCount = 0;
+	swapchainCI.pQueueFamilyIndices = NULL;
+	// 指定交换链图像的用途（直接渲染到这些图像上）
+	swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	// 指定变换（这里使用默认变换）
+	swapchainCI.preTransform = (VkSurfaceTransformFlagBitsKHR)preTransform;
+	// 指定alpha通道（这里设置为不透明）
+	swapchainCI.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	// 使用之前选择的呈现模式
+	swapchainCI.presentMode = swapchainPresentMode;
+	// 允许裁剪（隐藏的像素不需要更新）
+	swapchainCI.clipped = VK_TRUE;
+	swapchainCI.oldSwapchain = VK_NULL_HANDLE;
+
+	vkCreateSwapchainKHR(device, &swapchainCI, nullptr, &m_SwapChain);
+
 }
 
 void VulkanSwapChain::CreateImageViews()
@@ -356,4 +412,23 @@ void VulkanSwapChain::CreateCommandBuffers()
 
 	for (auto& commandBuffer : m_CommandBuffers)
 		vkBeginCommandBuffer(commandBuffer.CommandBuffer, &beginInfo);
+}
+
+void VulkanSwapChain::CreateSyncObjects()
+{
+	auto device = m_Device->GetVulkanDevice();
+
+	uint32_t framesInFlight = 3;
+	if (m_ImageAvailableSemaphores.size() != framesInFlight)
+	{
+		m_ImageAvailableSemaphores.resize(framesInFlight);
+		m_RenderFinishedSemaphores.resize(framesInFlight);
+		VkSemaphoreCreateInfo semaphoreCreateInfo{};
+		semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		for (size_t i = 0; i < framesInFlight; i++)
+		{
+			VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &m_ImageAvailableSemaphores[i]));
+			VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &m_RenderFinishedSemaphores[i]));
+		}
+	}
 }

@@ -38,6 +38,7 @@ void Application::Run()
 {
 	while (!glfwWindowShouldClose(m_Window->GetNativeWindow()))
 	{
+		m_Window->GetSwapChain().DrawFrame();
         glfwPollEvents();
 	}
 }

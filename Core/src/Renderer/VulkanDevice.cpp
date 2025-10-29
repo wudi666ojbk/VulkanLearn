@@ -174,7 +174,8 @@ VulkanDevice::VulkanDevice(const Ref<VulkanPhysicalDevice>& physicalDevice, VkPh
 	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 	VK_CHECK_RESULT(vkCreateDevice(m_PhysicalDevice->GetVulkanPhysicalDevice(), &createInfo, nullptr, &m_LogicalDevice));
-	
+
+	vkGetDeviceQueue(m_LogicalDevice, m_PhysicalDevice->m_QueueFamilyIndices.Graphics, 0, &m_GraphicsQueue);
 }
 
 VulkanDevice::~VulkanDevice()
