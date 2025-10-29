@@ -40,8 +40,14 @@ void Application::Run()
 {
 	while (!glfwWindowShouldClose(m_Window->GetNativeWindow()))
 	{
-		m_Renderer->DrawFrame();
-        glfwPollEvents();
+		glfwPollEvents();
+
+		int width, height;
+		glfwGetFramebufferSize(m_Window->GetNativeWindow(), &width, &height);
+		if (width > 0 && height > 0)
+		{
+			m_Renderer->DrawFrame();
+		}
 	}
 
 	vkDeviceWaitIdle(VulkanContext::Get()->GetCurrentDevice());

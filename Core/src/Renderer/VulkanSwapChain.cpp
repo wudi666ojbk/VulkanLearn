@@ -127,7 +127,7 @@ void VulkanSwapChain::OnResize(uint32_t width, uint32_t height)
 
 uint32_t VulkanSwapChain::AcquireNextImage()
 {
-	m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % 3;
+	m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 	auto device = m_Device->GetVulkanDevice();
 
 	// 检查上一帧是否已准备好
