@@ -1,11 +1,15 @@
 #pragma once
 #include "Vulkan.h"
 #include "VulkanPipeline.h"
+#include "VulkanVertexBuffer.h"
 
 class VulkanRenderer
 {
 public:
+	~VulkanRenderer();
+
 	void Init(Ref<VulkanPipeline> pipeline);
+	void Shutdown();
 
 	static void DrawFrame();
 
@@ -13,6 +17,7 @@ public:
 	static void EndRenderPass(VkCommandBuffer commandBuffer);
 private:
 	Ref<VulkanPipeline> m_Pipeline;
+	Ref<VulkanVertexBuffer> m_Buffer;
 };
 
 static VulkanRenderer* s_Renderer = nullptr;

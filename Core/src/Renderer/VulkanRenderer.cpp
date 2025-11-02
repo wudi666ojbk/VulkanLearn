@@ -3,11 +3,24 @@
 
 #include "Application.h"
 #include "VulkanContext.h"
+#include "VulkanVertexBuffer.h"
+
+VulkanRenderer::~VulkanRenderer()
+{
+	Shutdown();
+}
 
 void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 {
 	s_Renderer = this;
 	m_Pipeline = pipeline;
+
+	s_Renderer->m_Buffer = VulkanVertexBuffer::Create();
+}
+
+void VulkanRenderer::Shutdown()
+{
+	m_Buffer->Shutdown();
 }
 
 void VulkanRenderer::DrawFrame()
@@ -28,6 +41,12 @@ void VulkanRenderer::DrawFrame()
 	
 	// 开始渲染过程
 	BeginRenderPass(s_Renderer->m_Pipeline);
+
+	VkBuffer vertexBuffers[] = { s_Renderer->m_Buffer->GetVulkanBuffer() };
+	VkDeviceSize offsets[] = { 0 };
+	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+	vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 	
 	// 结束渲染过程
 	EndRenderPass(commandBuffer);
@@ -72,9 +91,6 @@ void VulkanRenderer::BeginRenderPass(Ref<VulkanPipeline> pipeline)
 	// 绑定 Vulkan Pipeline
 	VkPipeline vulkanPipeline = pipeline->GetVulkanPipeline();
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vulkanPipeline);
-
-	// 绘制三角形
-	vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 }
 
 void VulkanRenderer::EndRenderPass(VkCommandBuffer commandBuffer)

@@ -6,10 +6,10 @@
 class VulkanPipeline
 {
 public:
-	VulkanPipeline(Ref<VulkanShader> shader, VulkanSwapChain* swapChain);
+	VulkanPipeline(Ref<VulkanShader> shader);
 	~VulkanPipeline();
 
-	static Ref<VulkanPipeline> Create(Ref<VulkanShader> shader, VulkanSwapChain* swapChain);
+	static Ref<VulkanPipeline> Create(Ref<VulkanShader> shader);
 
 	void Invalidate();
 

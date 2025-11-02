@@ -4,6 +4,7 @@
 #include "Base/Window.h"
 #include <GLFW/glfw3.h>
 
+#include "Renderer/Vulkan.h"
 #include "Renderer/VulkanContext.h"
 #include "Renderer/VulkanShader.h"
 #include "Renderer/VulkanPipeline.h"
@@ -27,7 +28,7 @@ Application::Application()
 	auto& swap = m_Window->GetSwapChain();
 	auto shader = VulkanShader::Init();
 	auto device = VulkanContext::Get()->GetCurrentDevice();
-	Ref <VulkanPipeline> pipeline = VulkanPipeline::Create(shader, &swap);
+	Ref <VulkanPipeline> pipeline = VulkanPipeline::Create(shader);
 	m_Renderer = CreateScope<VulkanRenderer>();
 	m_Renderer->Init(pipeline);
 }

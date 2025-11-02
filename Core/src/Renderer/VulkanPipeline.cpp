@@ -2,9 +2,10 @@
 #include "VulkanPipeline.h"
 
 #include "Renderer/VulkanContext.h"
+#include "VulkanVertexBuffer.h"
 
-VulkanPipeline::VulkanPipeline(Ref<VulkanShader> shader, VulkanSwapChain* swapChain)
-	: m_Shader(shader), m_SwapChain(swapChain)
+VulkanPipeline::VulkanPipeline(Ref<VulkanShader> shader)
+	: m_Shader(shader)
 {
 	Invalidate();
 }
@@ -15,6 +16,8 @@ VulkanPipeline::~VulkanPipeline()
 
 	vkDestroyPipelineLayout(device, m_PipelineLayout, nullptr);
 	vkDestroyPipeline(device, m_Pipeline, nullptr);
+
+
 }
 
 void VulkanPipeline::Invalidate()
@@ -35,10 +38,14 @@ void VulkanPipeline::Invalidate()
 	// 顶点输入状态用于管线创建
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 0;
-	vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
-	vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+
+	auto bindingDescription = Vertex::GetBindingDescription();
+	auto attributeDescriptions = Vertex::GetAttributeDescriptions();
+
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 	// 输入装配状态描述如何组装图元
 	// 该管线将图元装配为三角形列表（尽管我们只使用一个三角形）
@@ -129,7 +136,7 @@ void VulkanPipeline::Invalidate()
 	pipelineInfo.pDynamicState = &dynamicState;
 	pipelineInfo.layout = m_PipelineLayout;
 
-	pipelineInfo.renderPass = m_SwapChain->GetRenderPass();
+	pipelineInfo.renderPass = VulkanContext::Get()->GetSwapChain().GetRenderPass();
 	pipelineInfo.subpass = 0;
 
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
@@ -138,7 +145,7 @@ void VulkanPipeline::Invalidate()
 	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline));
 }
 
-Ref<VulkanPipeline> VulkanPipeline::Create(Ref<VulkanShader> shader, VulkanSwapChain* swapChain)
+Ref<VulkanPipeline> VulkanPipeline::Create(Ref<VulkanShader> shader)
 {
-	return CreateRef<VulkanPipeline>(shader, swapChain);
+	return CreateRef<VulkanPipeline>(shader);
 }

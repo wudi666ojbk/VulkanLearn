@@ -1,0 +1,64 @@
+#pragma once
+#include "Vulkan.h"
+#include <glm/glm.hpp>
+
+struct Vertex 
+{
+    glm::vec2 pos;
+    glm::vec3 color;
+
+    static VkVertexInputBindingDescription GetBindingDescription() 
+    {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 0;
+        bindingDescription.stride = sizeof(Vertex);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+        return bindingDescription;
+    }
+
+    static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions() 
+    {
+        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+        return attributeDescriptions;
+    }
+};
+
+const std::vector<Vertex> vertices = {
+    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+};
+
+class VulkanVertexBuffer
+{
+public:
+    VulkanVertexBuffer();
+
+    static Ref<VulkanVertexBuffer> Create();
+    void Shutdown();
+
+    void Allocate();
+
+    VkBuffer GetVulkanBuffer() { return m_VertexBuffer; }
+private:
+    uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
+private:
+    VkBuffer m_VertexBuffer = nullptr;
+    VkDeviceMemory m_VertexBufferMemory = nullptr;
+
+    VkMemoryRequirements m_MemRequirements = {};
+    VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
+
+};
