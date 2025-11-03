@@ -5,11 +5,6 @@
 #include "VulkanContext.h"
 #include "VulkanVertexBuffer.h"
 
-VulkanRenderer::~VulkanRenderer()
-{
-	Shutdown();
-}
-
 void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 {
 	s_Renderer = this;

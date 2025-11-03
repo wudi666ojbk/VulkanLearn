@@ -46,6 +46,7 @@ public:
 	void Destroy();
 
 	VkQueue GetGraphicsQueue() { return m_GraphicsQueue; }
+	VkQueue GetComputeQueue() { return m_ComputeQueue; }
 
 	const Ref<VulkanPhysicalDevice>& GetPhysicalDevice() const { return m_PhysicalDevice; }
 	VkDevice GetVulkanDevice() const { return m_LogicalDevice; }
@@ -55,5 +56,6 @@ private:
 	VkPhysicalDeviceFeatures m_EnabledFeatures;
 
 	VkQueue m_GraphicsQueue;
+	VkQueue m_ComputeQueue;
 };
 

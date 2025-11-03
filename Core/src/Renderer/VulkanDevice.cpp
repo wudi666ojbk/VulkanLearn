@@ -50,7 +50,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice()
     // 获取请求的队列族类型的队列族索引
     // 请注意，这些索引可能会根据不同的实现而重叠
     static const float defaultQueuePriority(0.0f);
-    int requestedQueueTypes = VK_QUEUE_GRAPHICS_BIT;
+    int requestedQueueTypes = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
     m_QueueFamilyIndices = GetQueueFamilyIndices(requestedQueueTypes);
 
 	// 图形队列
@@ -62,6 +62,21 @@ VulkanPhysicalDevice::VulkanPhysicalDevice()
 		queueInfo.queueCount = 1;
 		queueInfo.pQueuePriorities = &defaultQueuePriority;
 		m_QueueCreateInfos.push_back(queueInfo);
+	}
+
+	// 计算队列
+	if (requestedQueueTypes & VK_QUEUE_COMPUTE_BIT)
+	{
+		if (m_QueueFamilyIndices.Compute != m_QueueFamilyIndices.Graphics)
+		{
+			// If compute family index differs, we need an additional queue create info for the compute queue
+			VkDeviceQueueCreateInfo queueInfo{};
+			queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queueInfo.queueFamilyIndex = m_QueueFamilyIndices.Compute;
+			queueInfo.queueCount = 1;
+			queueInfo.pQueuePriorities = &defaultQueuePriority;
+			m_QueueCreateInfos.push_back(queueInfo);
+		}
 	}
 }
 
@@ -176,6 +191,7 @@ VulkanDevice::VulkanDevice(const Ref<VulkanPhysicalDevice>& physicalDevice, VkPh
 	VK_CHECK_RESULT(vkCreateDevice(m_PhysicalDevice->GetVulkanPhysicalDevice(), &createInfo, nullptr, &m_LogicalDevice));
 
 	vkGetDeviceQueue(m_LogicalDevice, m_PhysicalDevice->m_QueueFamilyIndices.Graphics, 0, &m_GraphicsQueue);
+	vkGetDeviceQueue(m_LogicalDevice, m_PhysicalDevice->m_QueueFamilyIndices.Compute, 0, &m_ComputeQueue);
 }
 
 VulkanDevice::~VulkanDevice()

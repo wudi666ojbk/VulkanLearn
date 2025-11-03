@@ -29,6 +29,7 @@ public:
 	VkFramebuffer GetFramebuffer(uint32_t index) { return m_Framebuffers[index]; }
 
 	VkCommandBuffer GetCurrentDrawCommandBuffer() { return GetDrawCommandBuffer(m_CurrentFrameIndex); }
+	VkCommandPool GetCurrentDrawCommandPool() { return m_CommandBuffers[m_CurrentFrameIndex].CommandPool; }
 	VkCommandBuffer GetDrawCommandBuffer(uint32_t index) { return m_CommandBuffers[index].CommandBuffer; }
 private:
 	uint32_t AcquireNextImage();			// 获取下一个可用的图像索引

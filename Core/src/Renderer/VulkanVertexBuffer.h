@@ -45,20 +45,23 @@ class VulkanVertexBuffer
 {
 public:
     VulkanVertexBuffer();
+    ~VulkanVertexBuffer();
 
     static Ref<VulkanVertexBuffer> Create();
     void Shutdown();
 
-    void Allocate();
+    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-    VkBuffer GetVulkanBuffer() { return m_VertexBuffer; }
+    VkBuffer GetVulkanBuffer() const { return m_VertexBuffer; }
 private:
     uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
+    void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 private:
     VkBuffer m_VertexBuffer = nullptr;
     VkDeviceMemory m_VertexBufferMemory = nullptr;
 
-    VkMemoryRequirements m_MemRequirements = {};
-    VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
+    VkBuffer m_StagingBuffer;
+    VkDeviceMemory m_StagingBufferMemory;
 
+    VkMemoryRequirements m_MemRequirements = {};
 };

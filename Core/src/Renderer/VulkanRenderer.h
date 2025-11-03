@@ -6,8 +6,6 @@
 class VulkanRenderer
 {
 public:
-	~VulkanRenderer();
-
 	void Init(Ref<VulkanPipeline> pipeline);
 	void Shutdown();
 
