@@ -3,7 +3,6 @@
 
 #include "Application.h"
 #include "VulkanContext.h"
-#include "VulkanVertexBuffer.h"
 
 void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 {

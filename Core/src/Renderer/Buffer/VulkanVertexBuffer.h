@@ -1,5 +1,5 @@
 #pragma once
-#include "Vulkan.h"
+#include "Renderer/Vulkan.h"
 #include <glm/glm.hpp>
 
 struct Vertex 
@@ -59,9 +59,6 @@ private:
 private:
     VkBuffer m_VertexBuffer = nullptr;
     VkDeviceMemory m_VertexBufferMemory = nullptr;
-
-    VkBuffer m_StagingBuffer;
-    VkDeviceMemory m_StagingBufferMemory;
 
     VkMemoryRequirements m_MemRequirements = {};
 };

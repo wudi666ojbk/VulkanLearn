@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "VulkanVertexBuffer.h"
-#include "VulkanContext.h"
+#include "Renderer/VulkanContext.h"
 
 VulkanVertexBuffer::VulkanVertexBuffer()
 {
@@ -8,16 +8,21 @@ VulkanVertexBuffer::VulkanVertexBuffer()
 
 	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_StagingBuffer, m_StagingBufferMemory);
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
 	void* data;
-	vkMapMemory(device, m_StagingBufferMemory, 0, bufferSize, 0, &data);
+	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
 	memcpy(data, vertices.data(), (size_t)bufferSize);
-	vkUnmapMemory(device, m_StagingBufferMemory);
+	vkUnmapMemory(device, stagingBufferMemory);
 
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_VertexBuffer, m_VertexBufferMemory);
 
-	CopyBuffer(m_StagingBuffer, m_VertexBuffer, bufferSize);
+	CopyBuffer(stagingBuffer, m_VertexBuffer, bufferSize);
+
+	vkDestroyBuffer(device, stagingBuffer, nullptr);
+	vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
 VulkanVertexBuffer::~VulkanVertexBuffer()
@@ -34,8 +39,6 @@ void VulkanVertexBuffer::Shutdown()
 
 	vkDestroyBuffer(device, m_VertexBuffer, nullptr);
 	vkFreeMemory(device, m_VertexBufferMemory, nullptr);
-	vkDestroyBuffer(device, m_StagingBuffer, nullptr);
-	vkFreeMemory(device, m_StagingBufferMemory, nullptr);
 }
 
 void VulkanVertexBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
