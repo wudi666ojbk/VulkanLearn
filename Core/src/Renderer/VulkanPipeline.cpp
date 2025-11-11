@@ -2,7 +2,7 @@
 #include "VulkanPipeline.h"
 
 #include "Renderer/VulkanContext.h"
-#include "Buffer/VulkanVertexBuffer.h"
+#include "Data/Vertex.h"
 
 VulkanPipeline::VulkanPipeline(Ref<VulkanShader> shader)
 	: m_Shader(shader)

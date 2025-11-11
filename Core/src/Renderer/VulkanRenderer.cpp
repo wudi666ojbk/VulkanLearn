@@ -3,18 +3,20 @@
 
 #include "Application.h"
 #include "VulkanContext.h"
+#include "Data/Vertex.h"
 
 void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 {
 	s_Renderer = this;
 	m_Pipeline = pipeline;
 
-	s_Renderer->m_Buffer = VulkanVertexBuffer::Create();
+	s_Renderer->m_VertexBuffer = VulkanVertexBuffer::Create();
+	s_Renderer->m_IndexBuffer = VulkanIndexBuffer::Create();
 }
 
 void VulkanRenderer::Shutdown()
 {
-	m_Buffer->Shutdown();
+	m_VertexBuffer->Shutdown();
 }
 
 void VulkanRenderer::DrawFrame()
@@ -36,11 +38,14 @@ void VulkanRenderer::DrawFrame()
 	// 开始渲染过程
 	BeginRenderPass(s_Renderer->m_Pipeline);
 
-	VkBuffer vertexBuffers[] = { s_Renderer->m_Buffer->GetVulkanBuffer() };
+	VkBuffer vertexBuffers[] = { s_Renderer->m_VertexBuffer->GetVulkanBuffer() };
+	VkBuffer indexBuffer = s_Renderer->m_IndexBuffer->GetVulkanBuffer();
 	VkDeviceSize offsets[] = { 0 };
-	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-	vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+	vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 	
 	// 结束渲染过程
 	EndRenderPass(commandBuffer);

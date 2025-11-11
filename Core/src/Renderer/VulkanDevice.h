@@ -17,8 +17,11 @@ public:
 
 	bool IsExtensionSupported(const std::string& extensionName) const;
 
+	uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
+
 	VkPhysicalDevice GetVulkanPhysicalDevice() const { return m_PhysicalDevice; }
 	const QueueFamilyIndices& GetQueueFamilyIndices() const { return m_QueueFamilyIndices; }
+	const VkPhysicalDeviceMemoryProperties& GetMemoryProperties() const { return m_MemoryProperties; }
 private:
 	QueueFamilyIndices GetQueueFamilyIndices(int queueFlags);
 	// 枚举支持的扩展并保存到m_SupportedExtensions中
@@ -26,6 +29,9 @@ private:
 private:
 	VkPhysicalDevice m_PhysicalDevice = nullptr;
 	VkPhysicalDeviceProperties m_Properties;
+
+	VkPhysicalDeviceFeatures m_Features;
+	VkPhysicalDeviceMemoryProperties m_MemoryProperties;
 
 	QueueFamilyIndices m_QueueFamilyIndices;
 	std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
@@ -47,6 +53,8 @@ public:
 
 	VkQueue GetGraphicsQueue() { return m_GraphicsQueue; }
 	VkQueue GetComputeQueue() { return m_ComputeQueue; }
+
+
 
 	const Ref<VulkanPhysicalDevice>& GetPhysicalDevice() const { return m_PhysicalDevice; }
 	VkDevice GetVulkanDevice() const { return m_LogicalDevice; }

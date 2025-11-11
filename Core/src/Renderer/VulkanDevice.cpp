@@ -33,6 +33,9 @@ VulkanPhysicalDevice::VulkanPhysicalDevice()
     CORE_ASSERT(selectedPhysicalDevice, "不能找到适合的物理设备!");
     m_PhysicalDevice = selectedPhysicalDevice;   // 成功创建Vulkan物理设备
 
+	vkGetPhysicalDeviceFeatures(m_PhysicalDevice, &m_Features);
+	vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &m_MemoryProperties);
+
     // 获取物理设备的队列族属性
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, nullptr);
@@ -88,6 +91,23 @@ Ref<VulkanPhysicalDevice> VulkanPhysicalDevice::Create()
 bool VulkanPhysicalDevice::IsExtensionSupported(const std::string& extensionName) const
 {
 	return m_SupportedExtensions.find(extensionName) != m_SupportedExtensions.end();
+}
+
+uint32_t VulkanPhysicalDevice::GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const
+{
+	// Iterate over all memory types available for the device used in this example
+	for (uint32_t i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
+	{
+		if ((typeBits & 1) == 1)
+		{
+			if ((m_MemoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
+				return i;
+		}
+		typeBits >>= 1;
+	}
+
+	CORE_ASSERT(false, "Could not find a suitable memory type!");
+	return UINT32_MAX;
 }
 
 QueueFamilyIndices VulkanPhysicalDevice::GetQueueFamilyIndices(int flags)
