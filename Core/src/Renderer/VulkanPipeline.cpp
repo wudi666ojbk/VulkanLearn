@@ -23,6 +23,8 @@ VulkanPipeline::~VulkanPipeline()
 void VulkanPipeline::Invalidate()
 {
 	auto device = VulkanContext::Get()->GetCurrentDevice();
+	auto descriptorSetLayouts = m_Shader->GetDescriptorSetLayout();
+
 	// 启用动态状态
 	// 大多数状态都已烘焙到管线中，但仍然有一些动态状态可以在命令缓冲区中更改
 	// 为了能够更改这些状态，我们需要指定使用此管线将要更改的动态状态。它们的实际状态将在命令缓冲区中稍后设置。
@@ -111,8 +113,8 @@ void VulkanPipeline::Invalidate()
 	// 管线布局
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0; // Optional
-	pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayouts;
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 

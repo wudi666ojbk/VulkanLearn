@@ -7,6 +7,8 @@
 #include "VulkanDevice.h"
 #include "VulkanSwapChain.h"
 
+#include "Data/VulkanConfig.h"
+
 class VulkanContext
 {
 public:
@@ -23,6 +25,7 @@ public:
 	Ref<VulkanDevice> GetDevice() const { return m_Device; }
 	VkDevice GetCurrentDevice() const { return m_Device->GetVulkanDevice(); }
 	Ref<VulkanPhysicalDevice> GetPhysicalDevice() const { return m_PhysicalDevice; }
+	VulkanConfig& GetConfig() { return s_Config; }
 private:
 	bool CheckValidationLayerSupport();
 
@@ -32,4 +35,6 @@ private:
 	VkDebugUtilsMessengerEXT m_DebugUtilsMessenger = VK_NULL_HANDLE;
 
 	inline static VkInstance s_VulkanInstance;
+
+	VulkanConfig s_Config;
 };

@@ -13,7 +13,11 @@ public:
 
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
 
+    void CreateGraphicsPipeline();
+    void CreateDescriptors();
+
     const std::vector<VkPipelineShaderStageCreateInfo>& GetPipelineShaderStageCreateInfos() const { return m_PipelineShaderStageCreateInfos; }
+    VkDescriptorSetLayout GetDescriptorSetLayout() const { return m_DescriptorSetLayout; }
 
     VkShaderModule ReadShader(const std::string& filepath, int shaderType);
     std::vector<char> LoadShader(const std::string& filepath);
@@ -25,4 +29,5 @@ private:
 
 private:
     std::vector<VkPipelineShaderStageCreateInfo> m_PipelineShaderStageCreateInfos;
+    VkDescriptorSetLayout m_DescriptorSetLayout;
 };

@@ -26,6 +26,8 @@ VulkanShader::VulkanShader(const std::string& vertShaderPath, const std::string&
     fragShaderStageInfo.pName = "main";
 
     m_PipelineShaderStageCreateInfos = {vertShaderStageInfo, fragShaderStageInfo};
+
+    CreateDescriptors();
 }
 
 VulkanShader::~VulkanShader()
@@ -35,6 +37,8 @@ VulkanShader::~VulkanShader()
     for (auto shaderModule : m_PipelineShaderStageCreateInfos)
         vkDestroyShaderModule(device, shaderModule.module, nullptr);
     m_PipelineShaderStageCreateInfos.clear();
+
+    vkDestroyDescriptorSetLayout(device, m_DescriptorSetLayout, nullptr);
 }
 
 Ref<VulkanShader> VulkanShader::Init()
@@ -55,6 +59,29 @@ VkShaderModule VulkanShader::CreateShaderModule(const std::vector<char>& code)
     VK_CHECK_RESULT(vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule));
 
     return shaderModule;
+}
+
+void VulkanShader::CreateGraphicsPipeline()
+{
+}
+
+void VulkanShader::CreateDescriptors()
+{
+    auto device = VulkanContext::Get()->GetDevice()->GetVulkanDevice();
+
+    VkDescriptorSetLayoutBinding uboLayoutBinding{};
+    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboLayoutBinding;
+
+    VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_DescriptorSetLayout))
 }
 
 VkShaderModule VulkanShader::ReadShader(const std::string& filepath, int shaderType)

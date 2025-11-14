@@ -1,9 +1,14 @@
 #include "pch.h"
 #include "VulkanSwapChain.h"
 
+#include "VulkanContext.h"
+
 void VulkanSwapChain::Create(uint32_t* width, uint32_t* height)
 {
-	CreateSwapChain(width, height);
+	m_Width = *width;
+	m_Height = *height;
+
+	CreateSwapChain();
 	CreateImageViews();
 	CreateRenderPass();
 	CreateFramebuffers();
@@ -127,7 +132,7 @@ void VulkanSwapChain::OnResize(uint32_t width, uint32_t height)
 
 uint32_t VulkanSwapChain::AcquireNextImage()
 {
-	m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+	m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % VulkanContext::Get()->GetConfig().FramesInFlight;
 	auto device = m_Device->GetVulkanDevice();
 
 	// 检查上一帧是否已准备好
@@ -225,7 +230,7 @@ void VulkanSwapChain::GetQueueNodeIndex()
 	m_QueueNodeIndex = graphicsQueueNodeIndex;
 }
 
-void VulkanSwapChain::CreateSwapChain(uint32_t* width, uint32_t* height)
+void VulkanSwapChain::CreateSwapChain()
 {
 	VkDevice device = m_Device->GetVulkanDevice();
 	VkPhysicalDevice physicalDevice = m_Device->GetPhysicalDevice()->GetVulkanPhysicalDevice();
@@ -243,18 +248,18 @@ void VulkanSwapChain::CreateSwapChain(uint32_t* width, uint32_t* height)
 	if (surfCaps.currentExtent.width == (uint32_t)-1)
 	{
 		// 如果表面大小未定义，则大小设置为请求的图像大小
-		m_SwapChainExtent.width = *width;
-		m_SwapChainExtent.height = *height;
+		m_SwapChainExtent.width = m_Width;
+		m_SwapChainExtent.height = m_Height;
 	}
 	else
 	{
 		// 如果表面大小已定义，则交换链大小必须匹配
 		m_SwapChainExtent = surfCaps.currentExtent;
-		*width = surfCaps.currentExtent.width;
-		*height = surfCaps.currentExtent.height;
+		m_Width = surfCaps.currentExtent.width;
+		m_Height = surfCaps.currentExtent.height;
 	}
-	m_Width = *width;
-	m_Height = *height;
+	m_Width = m_Width;
+	m_Height = m_Height;
 
 	// 获取可用的呈现模式
 	uint32_t presentModeCount;
@@ -466,7 +471,7 @@ void VulkanSwapChain::CreateSyncObjects()
 {
 	auto device = m_Device->GetVulkanDevice();
 
-	uint32_t framesInFlight = MAX_FRAMES_IN_FLIGHT;
+	uint32_t framesInFlight = VulkanContext::Get()->GetConfig().FramesInFlight;
 	if (m_ImageAvailableSemaphores.size() != framesInFlight)
 	{
 		m_ImageAvailableSemaphores.resize(framesInFlight);

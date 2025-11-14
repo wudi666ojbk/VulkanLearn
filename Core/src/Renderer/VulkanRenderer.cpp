@@ -12,6 +12,7 @@ void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 
 	s_Renderer->m_VertexBuffer = VulkanVertexBuffer::Create();
 	s_Renderer->m_IndexBuffer = VulkanIndexBuffer::Create();
+	s_Renderer->m_UniformBuffer = VulkanUniformBuffer::Create();
 }
 
 void VulkanRenderer::Shutdown()
@@ -58,6 +59,11 @@ void VulkanRenderer::BeginRenderPass(Ref<VulkanPipeline> pipeline)
 {
 	auto& swapChain = Application::Get().GetWindow().GetSwapChain();
 	VkCommandBuffer commandBuffer = swapChain.GetCurrentDrawCommandBuffer();
+
+	s_Renderer->m_UniformBuffer->UpdateUniformBuffer(swapChain.GetCurrentImageIndex());
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 	VkRenderPassBeginInfo renderPassInfo{};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

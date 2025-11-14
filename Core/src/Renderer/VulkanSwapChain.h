@@ -21,12 +21,16 @@ public:
 	void OnResize(uint32_t width, uint32_t height);
 
 	// 成员获取
+	uint32_t GetHight() { return m_Height; }
+	uint32_t GetWidth() { return m_Width; }
+
 	VkRenderPass GetRenderPass() { return m_RenderPass; }
 	VkExtent2D GetSwapChainExtent() { return m_SwapChainExtent; }
 
 	// TODO: m_ImageCount临时用于获取当前帧缓冲区，后续需要修改
 	VkFramebuffer GetCurrentFramebuffer() { return GetFramebuffer(m_CurrentImageIndex); }
 	VkFramebuffer GetFramebuffer(uint32_t index) { return m_Framebuffers[index]; }
+	uint32_t GetCurrentImageIndex() { return m_CurrentImageIndex; }
 
 	VkCommandBuffer GetCurrentDrawCommandBuffer() { return GetDrawCommandBuffer(m_CurrentFrameIndex); }
 	VkCommandPool GetCurrentDrawCommandPool() { return m_CommandBuffers[m_CurrentFrameIndex].CommandPool; }
@@ -37,7 +41,7 @@ private:
 	// 获取支持的队列
 	void GetQueueNodeIndex();
 
-	void CreateSwapChain(uint32_t* width, uint32_t* height);
+	void CreateSwapChain();
 	void CreateImageViews();				// 创建图像视图
 	void CreateRenderPass();				// 创建渲染Pass
 	void CreateFramebuffers();				// 创建帧缓冲区
@@ -47,7 +51,6 @@ private:
 	// Vulkan实例
 	VkInstance m_Instance = nullptr;
 
-	static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3;
 
 	// Vulkan渲染通道
 	VkRenderPass m_RenderPass = nullptr;    // 用于屏幕渲染的RenderPass
