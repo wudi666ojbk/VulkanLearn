@@ -6,6 +6,12 @@
 class VulkanShader
 {
 public:
+    struct DescriptorSet
+    {
+        VkDescriptorPool Pool = nullptr;
+        std::vector<VkDescriptorSet> DescriptorSets;
+    };
+public:
     VulkanShader(const std::string& vertShaderPath, const std::string& fragShaderPath);
     virtual ~VulkanShader();
 

@@ -5,19 +5,24 @@
 #include "VulkanContext.h"
 #include "Data/Vertex.h"
 
+struct VulkanRendererData
+{
+	Ref<VulkanVertexBuffer> VertexBuffer;
+	Ref<VulkanIndexBuffer> IndexBuffer;
+	Ref<VulkanUniformBuffer> UniformBuffer;
+};
+
+static VulkanRendererData* s_Data = nullptr;
+
 void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 {
 	s_Renderer = this;
 	m_Pipeline = pipeline;
 
-	s_Renderer->m_VertexBuffer = VulkanVertexBuffer::Create();
-	s_Renderer->m_IndexBuffer = VulkanIndexBuffer::Create();
-	s_Renderer->m_UniformBuffer = VulkanUniformBuffer::Create();
-}
-
-void VulkanRenderer::Shutdown()
-{
-	m_VertexBuffer->Shutdown();
+	s_Data = new VulkanRendererData();
+	s_Data->VertexBuffer = VulkanVertexBuffer::Create();
+	s_Data->IndexBuffer = VulkanIndexBuffer::Create();
+	s_Data->UniformBuffer = VulkanUniformBuffer::Create();
 }
 
 void VulkanRenderer::DrawFrame()
@@ -39,8 +44,8 @@ void VulkanRenderer::DrawFrame()
 	// 开始渲染过程
 	BeginRenderPass(s_Renderer->m_Pipeline);
 
-	VkBuffer vertexBuffers[] = { s_Renderer->m_VertexBuffer->GetVulkanBuffer() };
-	VkBuffer indexBuffer = s_Renderer->m_IndexBuffer->GetVulkanBuffer();
+	VkBuffer vertexBuffers[] = { s_Data->VertexBuffer->GetVulkanBuffer() };
+	VkBuffer indexBuffer = s_Data->IndexBuffer->GetVulkanBuffer();
 	VkDeviceSize offsets[] = { 0 };
 
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
@@ -60,7 +65,7 @@ void VulkanRenderer::BeginRenderPass(Ref<VulkanPipeline> pipeline)
 	auto& swapChain = Application::Get().GetWindow().GetSwapChain();
 	VkCommandBuffer commandBuffer = swapChain.GetCurrentDrawCommandBuffer();
 
-	s_Renderer->m_UniformBuffer->UpdateUniformBuffer(swapChain.GetCurrentImageIndex());
+	s_Data->UniformBuffer->UpdateUniformBuffer(swapChain.GetCurrentImageIndex());
 
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
