@@ -16,6 +16,7 @@ public:
 
 	static void BeginRenderPass(Ref<VulkanPipeline> pipeline);
 	static void EndRenderPass(VkCommandBuffer commandBuffer);
+
 private:
 	Ref<VulkanPipeline> m_Pipeline;
 };

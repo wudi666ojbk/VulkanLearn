@@ -10,19 +10,62 @@ struct VulkanRendererData
 	Ref<VulkanVertexBuffer> VertexBuffer;
 	Ref<VulkanIndexBuffer> IndexBuffer;
 	Ref<VulkanUniformBuffer> UniformBuffer;
+
+	VulkanShader::ShaderDescriptorSet shaderDescriptorSet;
 };
 
 static VulkanRendererData* s_Data = nullptr;
 
 void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 {
+	auto device = VulkanContext::Get()->GetCurrentDevice();
+
 	s_Renderer = this;
 	m_Pipeline = pipeline;
 
 	s_Data = new VulkanRendererData();
+
 	s_Data->VertexBuffer = VulkanVertexBuffer::Create();
 	s_Data->IndexBuffer = VulkanIndexBuffer::Create();
-	s_Data->UniformBuffer = VulkanUniformBuffer::Create();
+	s_Data->UniformBuffer = VulkanUniformBuffer::Create(); 
+
+	uint32_t framesInFlight = VulkanContext::Get()->GetConfig().FramesInFlight; // 获取最大飞行帧数
+
+	auto shader = pipeline->GetShader();
+
+	s_Data->shaderDescriptorSet = shader->CreateDescriptorSets(); // 创建描述符集
+
+	VkDescriptorSetLayout descriptorSetLayout = shader->GetDescriptorSetLayout(); // 获取描述符布局
+
+	std::vector<VkBuffer> uniformBuffer = s_Data->UniformBuffer->GetVulkanBuffer();
+	for (size_t i = 0; i < framesInFlight; i++)
+	{
+		VkDescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = uniformBuffer[i];
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBufferObject);
+
+		VkWriteDescriptorSet descriptorWrite{};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = s_Data->shaderDescriptorSet.DescriptorSets[i];
+		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstArrayElement = 0;
+
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.descriptorCount = 1;
+
+		descriptorWrite.pBufferInfo = &bufferInfo;
+		vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr); // 更新描述符集
+	}
+}
+
+void VulkanRenderer::Shutdown()
+{
+	auto device = VulkanContext::Get()->GetCurrentDevice();
+
+	vkDestroyDescriptorPool(device, s_Data->shaderDescriptorSet.Pool, nullptr);
+
+	delete s_Data;
 }
 
 void VulkanRenderer::DrawFrame()
@@ -50,6 +93,11 @@ void VulkanRenderer::DrawFrame()
 
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 	vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+	// 绑定描述符集
+	auto pipelineLayout = s_Renderer->m_Pipeline->GetVulkanPipelineLayout();
+	std::vector<VkDescriptorSet> descriptorSets = s_Data->shaderDescriptorSet.DescriptorSets;
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[swapChain.GetCurrentImageIndex()], 0, nullptr);
 
 	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 	

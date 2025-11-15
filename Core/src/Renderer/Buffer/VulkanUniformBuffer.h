@@ -21,8 +21,8 @@ public:
 
     static Ref<VulkanUniformBuffer> Create();
 
-    VkBuffer GetVulkanBuffer() const override { return m_UniformBuffers[0]; }
-    
+    std::vector<VkBuffer> GetVulkanBuffer() const { return m_UniformBuffers; }
+
     void UpdateUniformBuffer(uint32_t currentImage);
 private:
     std::vector<VkBuffer> m_UniformBuffers;

@@ -12,7 +12,7 @@ public:
     static Ref<VulkanVertexBuffer> Create();
     void Shutdown();
 
-    virtual VkBuffer GetVulkanBuffer() const override { return m_VertexBuffer; }
+    virtual VkBuffer GetVulkanBuffer() const { return m_VertexBuffer; }
 private:
     VkBuffer m_VertexBuffer = nullptr;
     VkDeviceMemory m_VertexBufferMemory = nullptr;

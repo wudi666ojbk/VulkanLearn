@@ -61,6 +61,37 @@ VkShaderModule VulkanShader::CreateShaderModule(const std::vector<char>& code)
     return shaderModule;
 }
 
+VulkanShader::ShaderDescriptorSet VulkanShader::CreateDescriptorSets()
+{
+    ShaderDescriptorSet result;
+
+    VkDevice device = VulkanContext::Get()->GetCurrentDevice();
+    uint32_t framesInFlight = VulkanContext::Get()->GetConfig().FramesInFlight;
+
+    // 创建描述符池
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = static_cast<uint32_t>(framesInFlight);
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.maxSets = static_cast<uint32_t>(framesInFlight);
+    VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &result.Pool));
+
+    std::vector<VkDescriptorSetLayout> layouts(framesInFlight, m_DescriptorSetLayout);
+    VkDescriptorSetAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = result.Pool;
+    allocInfo.descriptorSetCount = static_cast<uint32_t>(framesInFlight);
+    allocInfo.pSetLayouts = layouts.data();
+
+    result.DescriptorSets.resize(framesInFlight);
+    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, result.DescriptorSets.data()));
+
+    return result;
+}
+
 void VulkanShader::CreateGraphicsPipeline()
 {
 }

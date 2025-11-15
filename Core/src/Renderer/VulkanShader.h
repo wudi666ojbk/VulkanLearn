@@ -6,7 +6,7 @@
 class VulkanShader
 {
 public:
-    struct DescriptorSet
+    struct ShaderDescriptorSet
     {
         VkDescriptorPool Pool = nullptr;
         std::vector<VkDescriptorSet> DescriptorSets;
@@ -18,7 +18,7 @@ public:
     static Ref<VulkanShader> Init();
 
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
-
+    ShaderDescriptorSet CreateDescriptorSets();
     void CreateGraphicsPipeline();
     void CreateDescriptors();
 
@@ -35,5 +35,7 @@ private:
 
 private:
     std::vector<VkPipelineShaderStageCreateInfo> m_PipelineShaderStageCreateInfos;
+
     VkDescriptorSetLayout m_DescriptorSetLayout;
+    VkDescriptorSet m_DescriptorSet;
 };

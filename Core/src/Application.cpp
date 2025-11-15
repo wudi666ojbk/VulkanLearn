@@ -35,6 +35,7 @@ Application::Application()
 
 Application::~Application()
 {
+	m_Renderer->Shutdown();
 }
 
 void Application::Run()

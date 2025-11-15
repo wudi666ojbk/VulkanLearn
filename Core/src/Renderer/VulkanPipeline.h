@@ -16,6 +16,7 @@ public:
 	// 获取成员变量
 	VkPipelineLayout GetVulkanPipelineLayout() const { return m_PipelineLayout; }
 	VkPipeline GetVulkanPipeline() { return m_Pipeline; }
+	virtual Ref<VulkanShader> GetShader() const { return m_Shader; }
 private:
 private:
 	Ref<VulkanShader> m_Shader;
