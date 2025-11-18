@@ -1,6 +1,9 @@
 #pragma once
 #include "Vulkan.h"
 
+#include "VulkanCommandPool.h"
+#include <map>
+
 struct QueueFamilyIndices
 {
 	int32_t Graphics = -1;
@@ -14,6 +17,8 @@ public:
 	VulkanPhysicalDevice();		// 创建物理设备
 
 	static Ref<VulkanPhysicalDevice> Create();
+
+	VkCommandBuffer AllocateCommandBuffer(bool begin);
 
 	bool IsExtensionSupported(const std::string& extensionName) const;
 
@@ -54,14 +59,20 @@ public:
 	VkQueue GetGraphicsQueue() { return m_GraphicsQueue; }
 	VkQueue GetComputeQueue() { return m_ComputeQueue; }
 
-
+	VkCommandBuffer GetCommandBuffer(bool begin, bool compute = false);
+	void FlushCommandBuffer(VkCommandBuffer commandBuffer);
 
 	const Ref<VulkanPhysicalDevice>& GetPhysicalDevice() const { return m_PhysicalDevice; }
 	VkDevice GetVulkanDevice() const { return m_LogicalDevice; }
 private:
+	Ref<VulkanCommandPool> GetThreadLocalCommandPool();
+	Ref<VulkanCommandPool> GetOrCreateThreadLocalCommandPool();
+private:
 	VkDevice m_LogicalDevice = nullptr;
 	Ref<VulkanPhysicalDevice> m_PhysicalDevice;
 	VkPhysicalDeviceFeatures m_EnabledFeatures;
+
+	std::map<std::thread::id, Ref<VulkanCommandPool>> m_CommandPools;
 
 	VkQueue m_GraphicsQueue;
 	VkQueue m_ComputeQueue;

@@ -17,13 +17,15 @@ project "Sandbox"
 	{
 		"src/**.h",
 		"src/**.cpp",
+		"vendor/stb_image/include/**.h",
 	}
 	includedirs
 	{
 		"src",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.VulkanSDK}"
+		"%{IncludeDir.VulkanSDK}",
+		"%{IncludeDir.stb_image}"
 	}
 	links
 	{

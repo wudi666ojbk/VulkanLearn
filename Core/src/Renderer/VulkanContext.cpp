@@ -19,7 +19,6 @@ VulkanContext::~VulkanContext()
 {
 	if (enableValidationLayers) VulkanDebug::DestroyDebugUtilsMessengerEXT(s_VulkanInstance, m_DebugUtilsMessenger, nullptr);
 
-
 	vkDestroyInstance(s_VulkanInstance, nullptr);
 }
 

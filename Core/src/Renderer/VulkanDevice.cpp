@@ -220,6 +220,37 @@ VulkanDevice::~VulkanDevice()
 
 void VulkanDevice::Destroy()
 {
+	m_CommandPools.clear();
 	vkDeviceWaitIdle(m_LogicalDevice);
 	vkDestroyDevice(m_LogicalDevice, nullptr);
+}
+
+VkCommandBuffer VulkanDevice::GetCommandBuffer(bool begin, bool compute)
+{
+	return GetOrCreateThreadLocalCommandPool()->AllocateCommandBuffer(begin, compute);
+}
+
+void VulkanDevice::FlushCommandBuffer(VkCommandBuffer commandBuffer)
+{
+	GetThreadLocalCommandPool()->FlushCommandBuffer(commandBuffer);
+}
+
+Ref<VulkanCommandPool> VulkanDevice::GetThreadLocalCommandPool()
+{
+	auto threadID = std::this_thread::get_id();
+	CORE_ASSERT(m_CommandPools.find(threadID) != m_CommandPools.end());
+
+	return m_CommandPools.at(threadID);
+}
+
+Ref<VulkanCommandPool> VulkanDevice::GetOrCreateThreadLocalCommandPool()
+{
+	auto threadID = std::this_thread::get_id();
+	auto commandPoolIt = m_CommandPools.find(threadID);
+	if (commandPoolIt != m_CommandPools.end())
+		return commandPoolIt->second;
+
+	Ref<VulkanCommandPool> commandPool = CreateRef<VulkanCommandPool>();
+	m_CommandPools[threadID] = commandPool;
+	return commandPool;
 }

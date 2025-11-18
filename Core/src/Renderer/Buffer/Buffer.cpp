@@ -68,3 +68,12 @@ void Buffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize siz
 
 	vkFreeCommandBuffers(device->GetVulkanDevice(), commandPool, 1, &commandBuffer);
 }
+
+void Buffer::Allocate(const void* dstdata, VkDeviceSize size, VkDeviceMemory memory)
+{
+	auto device = VulkanContext::Get()->GetCurrentDevice();
+	void* data;
+	vkMapMemory(device, memory, 0, size, 0, &data);
+	memcpy(data, dstdata, static_cast<size_t>(size));
+	vkUnmapMemory(device, memory);
+}

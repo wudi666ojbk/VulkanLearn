@@ -22,3 +22,16 @@ private:
 };
 
 static VulkanRenderer* s_Renderer = nullptr;
+
+namespace Utils
+{
+	void InsertImageMemoryBarrier(
+		VkCommandBuffer cmdbuffer,
+		VkImage image,
+		VkAccessFlags srcAccessMask,
+		VkAccessFlags dstAccessMask,
+		VkImageLayout oldImageLayout,
+		VkImageLayout newImageLayout,
+		VkPipelineStageFlags srcStageMask,
+		VkPipelineStageFlags dstStageMask);
+}

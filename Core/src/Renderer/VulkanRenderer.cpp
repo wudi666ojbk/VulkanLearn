@@ -5,6 +5,8 @@
 #include "VulkanContext.h"
 #include "Data/Vertex.h"
 
+#include "VulkanTexture.h"
+
 struct VulkanRendererData
 {
 	Ref<VulkanVertexBuffer> VertexBuffer;
@@ -28,6 +30,12 @@ void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 	s_Data->VertexBuffer = VulkanVertexBuffer::Create();
 	s_Data->IndexBuffer = VulkanIndexBuffer::Create();
 	s_Data->UniformBuffer = VulkanUniformBuffer::Create(); 
+
+	std::filesystem::path filePath = "textures/texture.jpg";
+	TextureSpecification textureSpec;
+	textureSpec.Width = 1280;
+	textureSpec.Height = 960;
+	VulkanTexture::Create(textureSpec, filePath);
 
 	uint32_t framesInFlight = VulkanContext::Get()->GetConfig().FramesInFlight; // 获取最大飞行帧数
 
@@ -156,4 +164,43 @@ void VulkanRenderer::EndRenderPass(VkCommandBuffer commandBuffer)
 	vkCmdEndRenderPass(commandBuffer);
 	// 结束命令缓冲区记录
 	VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+}
+
+namespace Utils{
+
+	void InsertImageMemoryBarrier(
+		VkCommandBuffer cmdbuffer,
+		VkImage image,
+		VkAccessFlags srcAccessMask,
+		VkAccessFlags dstAccessMask,
+		VkImageLayout oldImageLayout,
+		VkImageLayout newImageLayout,
+		VkPipelineStageFlags srcStageMask,
+		VkPipelineStageFlags dstStageMask)
+	{
+		VkImageMemoryBarrier imageMemoryBarrier{};
+		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+		imageMemoryBarrier.srcAccessMask = srcAccessMask;
+		imageMemoryBarrier.dstAccessMask = dstAccessMask;
+		imageMemoryBarrier.oldLayout = oldImageLayout;
+		imageMemoryBarrier.newLayout = newImageLayout;
+		imageMemoryBarrier.image = image;
+		imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
+		imageMemoryBarrier.subresourceRange.levelCount = 1;
+		imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
+		imageMemoryBarrier.subresourceRange.layerCount = 1;
+
+		vkCmdPipelineBarrier(
+			cmdbuffer,
+			srcStageMask,
+			dstStageMask,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &imageMemoryBarrier);
+	}
 }

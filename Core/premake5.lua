@@ -20,6 +20,7 @@ project "Core"
 	{
 		"src/**.h",
 		"src/**.cpp",
+		"../vendor/stb/include/**.h"
 	}
 	includedirs
 	{
@@ -27,7 +28,8 @@ project "Core"
 		"../vendor/spdlog",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.VulkanSDK}"
+		"%{IncludeDir.VulkanSDK}",
+		"%{IncludeDir.stb_image}"
 	}
 	links
 	{
