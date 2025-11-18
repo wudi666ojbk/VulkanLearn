@@ -18,8 +18,6 @@ public:
 
 	static Ref<VulkanPhysicalDevice> Create();
 
-	VkCommandBuffer AllocateCommandBuffer(bool begin);
-
 	bool IsExtensionSupported(const std::string& extensionName) const;
 
 	uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
