@@ -5,6 +5,7 @@
 #include "Buffer/VulkanVertexBuffer.h"
 #include "Buffer/VulkanIndexBuffer.h"
 #include "Buffer/VulkanUniformBuffer.h"
+#include "VulkanTexture.h"
 
 class VulkanRenderer
 {
@@ -19,6 +20,7 @@ public:
 
 private:
 	Ref<VulkanPipeline> m_Pipeline;
+	Ref<VulkanTexture> m_Texture;
 };
 
 static VulkanRenderer* s_Renderer = nullptr;

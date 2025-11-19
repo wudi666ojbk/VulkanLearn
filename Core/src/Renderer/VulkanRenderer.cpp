@@ -35,7 +35,7 @@ void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 	TextureSpecification textureSpec;
 	textureSpec.Width = 1280;
 	textureSpec.Height = 960;
-	VulkanTexture::Create(textureSpec, filePath);
+	m_Texture = VulkanTexture::Create(textureSpec, filePath);
 
 	uint32_t framesInFlight = VulkanContext::Get()->GetConfig().FramesInFlight; // 获取最大飞行帧数
 
@@ -53,17 +53,29 @@ void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(UniformBufferObject);
 
-		VkWriteDescriptorSet descriptorWrite{};
-		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet = s_Data->shaderDescriptorSet.DescriptorSets[i];
-		descriptorWrite.dstBinding = 0;
-		descriptorWrite.dstArrayElement = 0;
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageView = m_Texture->GetImageView();
+		imageInfo.sampler = m_Texture->GetSampler();
+		
+		std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = s_Data->shaderDescriptorSet.DescriptorSets[i];
+		descriptorWrites[0].dstBinding = 0;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].pBufferInfo = &bufferInfo;
 
-		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrite.descriptorCount = 1;
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = s_Data->shaderDescriptorSet.DescriptorSets[i];
+		descriptorWrites[1].dstBinding = 1;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pImageInfo = &imageInfo;
 
-		descriptorWrite.pBufferInfo = &bufferInfo;
-		vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr); // 更新描述符集
+		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 }
 
@@ -72,6 +84,8 @@ void VulkanRenderer::Shutdown()
 	auto device = VulkanContext::Get()->GetCurrentDevice();
 
 	vkDestroyDescriptorPool(device, s_Data->shaderDescriptorSet.Pool, nullptr);
+	
+	m_Texture.reset(); // 显式释放纹理资源
 
 	delete s_Data;
 }

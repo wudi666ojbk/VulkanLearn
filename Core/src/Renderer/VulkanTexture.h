@@ -17,6 +17,10 @@ public:
 	~VulkanTexture();
 
 	static Ref<VulkanTexture> Create(const TextureSpecification& specification, const std::filesystem::path& filepath);
+
+	VkImage GetImage() const { return m_Image; }
+	VkImageView GetImageView() const { return m_ImageView; }
+	VkSampler GetSampler() const { return m_Sampler; }
 private:
 	void CreateTextureImageView();
 	void CreateTextureSampler();
