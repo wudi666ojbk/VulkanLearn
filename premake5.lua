@@ -12,6 +12,7 @@ workspace "VulkanLearn"
 	defines
 	{
 		"SPDLOG_USE_STD_FORMAT",
+		"GLM_FORCE_DEPTH_ZERO_TO_ONE"
 	}
 	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 

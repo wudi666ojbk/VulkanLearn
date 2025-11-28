@@ -103,6 +103,7 @@ void VulkanShader::CreateDescriptors()
 {
     auto device = VulkanContext::Get()->GetDevice()->GetVulkanDevice();
 
+    // 创建描述符布局
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

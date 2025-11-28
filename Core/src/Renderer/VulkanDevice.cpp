@@ -81,6 +81,9 @@ VulkanPhysicalDevice::VulkanPhysicalDevice()
 			m_QueueCreateInfos.push_back(queueInfo);
 		}
 	}
+
+	m_DepthFormat = FindDepthFormat();
+	CORE_ASSERT(m_DepthFormat);
 }
 
 Ref<VulkanPhysicalDevice> VulkanPhysicalDevice::Create()
@@ -184,6 +187,27 @@ void VulkanPhysicalDevice::EnumerateSupportedExtensions()
 			}
 		}
 	}
+}
+
+VkFormat VulkanPhysicalDevice::FindDepthFormat() const
+{
+	std::vector<VkFormat> depthFormats = {
+			VK_FORMAT_D32_SFLOAT_S8_UINT,
+			VK_FORMAT_D32_SFLOAT,
+			VK_FORMAT_D24_UNORM_S8_UINT,
+			VK_FORMAT_D16_UNORM_S8_UINT,
+			VK_FORMAT_D16_UNORM
+	};
+
+	for (auto& format : depthFormats)
+	{
+		VkFormatProperties formatProps;
+		vkGetPhysicalDeviceFormatProperties(m_PhysicalDevice, format, &formatProps);
+		// 格式必须支持最佳平铺模式下的深度模板附件
+		if (formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+			return format;
+	}
+	return VK_FORMAT_UNDEFINED;
 }
 
 VulkanDevice::VulkanDevice(const Ref<VulkanPhysicalDevice>& physicalDevice, VkPhysicalDeviceFeatures enabledFeatures)

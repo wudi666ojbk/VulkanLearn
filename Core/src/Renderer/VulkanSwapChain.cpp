@@ -11,6 +11,7 @@ void VulkanSwapChain::Create(uint32_t* width, uint32_t* height)
 	CreateSwapChain();
 	CreateImageViews();
 	CreateRenderPass();
+	CreateDepthResources();
 	CreateFramebuffers();
 	CreateCommandBuffers();
 	CreateSyncObjects();
@@ -38,6 +39,10 @@ void VulkanSwapChain::Destroy()
 {
 	auto device = m_Device->GetVulkanDevice();
 	vkDeviceWaitIdle(device);
+
+	vkDestroyImageView(device, m_DepthImage.ImageView, nullptr);
+	vkDestroyImage(device, m_DepthImage.Image, nullptr);
+	vkFreeMemory(device, m_DepthImage.depthImageMemory, nullptr);
 
 	for (auto &imageView : m_Images)
 		vkDestroyImageView(m_Device->GetVulkanDevice(), imageView.ImageView, nullptr);
@@ -379,6 +384,9 @@ void VulkanSwapChain::CreateImageViews()
 
 void VulkanSwapChain::CreateRenderPass()
 {
+	auto physicalDevice = VulkanContext::Get()->GetPhysicalDevice();
+
+	// 颜色附件
 	VkAttachmentDescription colorAttachment{};
 	colorAttachment.format = m_ColorFormat;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -394,24 +402,41 @@ void VulkanSwapChain::CreateRenderPass()
 	colorAttachmentRef.attachment = 0;
 	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+	// 深度附件
+	VkAttachmentDescription depthAttachment{};
+	depthAttachment.format = physicalDevice->GetDepthFormat();
+	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference depthAttachmentRef{};
+	depthAttachmentRef.attachment = 1;
+	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 	VkSubpassDescription subpass{};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
+	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 	// 子通道依赖关系
 	VkSubpassDependency dependency{};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.srcAccessMask = 0;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
+	std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
 	VkRenderPassCreateInfo renderPassInfo{};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	renderPassInfo.attachmentCount = 1;
-	renderPassInfo.pAttachments = &colorAttachment;
+	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+	renderPassInfo.pAttachments = attachments.data();
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
 
@@ -423,15 +448,16 @@ void VulkanSwapChain::CreateFramebuffers()
 	m_Framebuffers.resize(m_ImageCount);
 
 	for (size_t i = 0; i < m_ImageCount; i++) {
-		VkImageView attachments[] = {
-			m_Images[i].ImageView
+		std::array<VkImageView, 2> attachments = {
+			m_Images[i].ImageView,
+			m_DepthImage.ImageView
 		};
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.renderPass = m_RenderPass;
-		framebufferInfo.attachmentCount = 1;
-		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		framebufferInfo.pAttachments = attachments.data();
 		framebufferInfo.width = m_SwapChainExtent.width;
 		framebufferInfo.height = m_SwapChainExtent.height;
 		framebufferInfo.layers = 1;
@@ -497,4 +523,54 @@ void VulkanSwapChain::CreateSyncObjects()
 			VK_CHECK_RESULT(vkCreateFence(m_Device->GetVulkanDevice(), &fenceCreateInfo, nullptr, &fence));
 		}
 	}
+}
+
+void VulkanSwapChain::CreateDepthResources()
+{
+	VkFormat depthFormat = m_Device->GetPhysicalDevice()->GetDepthFormat();
+
+	// 创建深度图像
+	VkImageCreateInfo imageInfo{};
+	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageInfo.format = depthFormat;
+	imageInfo.extent.width = m_SwapChainExtent.width;
+	imageInfo.extent.height = m_SwapChainExtent.height;
+	imageInfo.extent.depth = 1;
+	imageInfo.mipLevels = 1;
+	imageInfo.arrayLayers = 1;
+	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	VK_CHECK_RESULT(vkCreateImage(m_Device->GetVulkanDevice(), &imageInfo, nullptr, &m_DepthImage.Image));
+
+	// 分配内存
+	VkMemoryRequirements memRequirements;
+	vkGetImageMemoryRequirements(m_Device->GetVulkanDevice(), m_DepthImage.Image, &memRequirements);
+
+	VkMemoryAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = m_Device->GetPhysicalDevice()->GetMemoryTypeIndex(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	VK_CHECK_RESULT(vkAllocateMemory(m_Device->GetVulkanDevice(), &allocInfo, nullptr, &m_DepthImage.depthImageMemory));
+
+	vkBindImageMemory(m_Device->GetVulkanDevice(), m_DepthImage.Image, m_DepthImage.depthImageMemory, 0);
+
+	// 创建图像视图
+	VkImageViewCreateInfo viewInfo{};
+	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewInfo.image = m_DepthImage.Image;
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format = depthFormat;
+	viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	viewInfo.subresourceRange.baseMipLevel = 0;
+	viewInfo.subresourceRange.levelCount = 1;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount = 1;
+
+	VK_CHECK_RESULT(vkCreateImageView(m_Device->GetVulkanDevice(), &viewInfo, nullptr, &m_DepthImage.ImageView));
 }

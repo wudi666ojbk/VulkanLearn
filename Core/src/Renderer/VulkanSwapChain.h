@@ -47,6 +47,7 @@ private:
 	void CreateFramebuffers();				// 创建帧缓冲区
 	void CreateCommandBuffers();			// 创建命令缓冲区
 	void CreateSyncObjects();				// 创建同步对象
+	void CreateDepthResources();			// 创建深度缓冲区
 private:
 	// Vulkan实例
 	VkInstance m_Instance = nullptr;
@@ -78,6 +79,13 @@ private:
 		VkImageView ImageView = nullptr;
 	};
 	std::vector<SwapchainImage> m_Images;
+
+	struct
+	{
+		VkImage Image = nullptr;
+		VkDeviceMemory depthImageMemory = nullptr;
+		VkImageView ImageView = nullptr;
+	} m_DepthImage;
 
 	// Semaphores to signal that images are available for rendering and that rendering has finished (one pair for each frame in flight)
 	std::vector<VkSemaphore> m_ImageAvailableSemaphores;

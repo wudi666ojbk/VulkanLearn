@@ -22,6 +22,8 @@ public:
 
 	uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
 
+	VkFormat GetDepthFormat() const { return m_DepthFormat; }
+
 	VkPhysicalDevice GetVulkanPhysicalDevice() const { return m_PhysicalDevice; }
 	const QueueFamilyIndices& GetQueueFamilyIndices() const { return m_QueueFamilyIndices; }
 	const VkPhysicalDeviceMemoryProperties& GetMemoryProperties() const { return m_MemoryProperties; }
@@ -29,6 +31,8 @@ private:
 	QueueFamilyIndices GetQueueFamilyIndices(int queueFlags);
 	// 枚举支持的扩展并保存到m_SupportedExtensions中
 	void EnumerateSupportedExtensions();
+	VkFormat FindDepthFormat() const;
+	
 private:
 	VkPhysicalDevice m_PhysicalDevice = nullptr;
 	VkPhysicalDeviceProperties m_Properties;
@@ -42,6 +46,9 @@ private:
 
 	// 设备支持的扩展
 	std::unordered_set<std::string> m_SupportedExtensions;
+
+	// 深度格式
+	VkFormat m_DepthFormat = VK_FORMAT_UNDEFINED;
 
 	friend class VulkanDevice;
 };
