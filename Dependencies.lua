@@ -11,6 +11,7 @@ LibraryDir = {}
 LibraryDir["VulkanSDK"] = "%{VULKAN_SDK}/Lib"
 LibraryDir["VulkanSDK_Debug"] = "%{VULKAN_SDK}/Lib"
 LibraryDir["VulkanSDK_Release"] = "%{VULKAN_SDK}/Lib"
+LibraryDir["GLFW_Lib"] = "%{wks.location}/vendor/GLFW/include"
 
 Library = {}
 -- Vulkan 库配置

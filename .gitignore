@@ -19,6 +19,3 @@ bin-int/
 **.nsight-gfxproj
 **.DotSettings
 **.user
-
-# 第三方
-vendor/

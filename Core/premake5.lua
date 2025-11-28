@@ -22,10 +22,14 @@ project "Core"
 		"src/**.cpp",
 		"../vendor/stb/include/**.h"
 	}
+	defines
+	{
+		"GLFW_INCLUDE_NONE"
+	}
 	includedirs
 	{
 		"src",
-		"../vendor/spdlog",
+		"../vendor/spdlog/include",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.VulkanSDK}",
