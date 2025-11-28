@@ -3,7 +3,7 @@
 
 #include "Buffer.h"
 
-class VulkanIndexBuffer : public Buffer
+class VulkanIndexBuffer : public VulkanBuffer
 {
 public:
 	VulkanIndexBuffer();

@@ -13,7 +13,7 @@ struct UniformBufferObject
     glm::mat4 proj;
 };
 
-class VulkanUniformBuffer : Buffer
+class VulkanUniformBuffer : VulkanBuffer
 {
 public:
     VulkanUniformBuffer();

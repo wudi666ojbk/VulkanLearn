@@ -1,6 +1,8 @@
 #pragma once
 #include "Vulkan.h"
 
+#include "Buffer/Buffer.h"
+
 #include <filesystem>
 
 struct TextureSpecification
@@ -25,10 +27,12 @@ private:
 	void CreateTextureImageView();
 	void CreateTextureSampler();
 	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
-	void ToBufferFromFile();
+	Buffer ToBufferFromFile(const std::filesystem::path& path, uint32_t& outWidth, uint32_t& outHeight);
 private:
 	TextureSpecification m_Specification;
 	std::filesystem::path m_Path;
+
+	Buffer m_ImageData;
 	
 	VkImage m_Image;
 	VkImageView m_ImageView;

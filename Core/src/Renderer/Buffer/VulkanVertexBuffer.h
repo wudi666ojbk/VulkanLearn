@@ -3,7 +3,7 @@
 
 #include "Buffer.h"
 
-class VulkanVertexBuffer : public Buffer
+class VulkanVertexBuffer : public VulkanBuffer
 {
 public:
     VulkanVertexBuffer();

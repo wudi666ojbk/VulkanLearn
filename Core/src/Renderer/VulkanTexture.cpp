@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "VulkanTexture.h"
 
-#include "Buffer/Buffer.h"
 #include "VulkanContext.h"
 #include "VulkanRenderer.h"
 
@@ -23,9 +22,14 @@ namespace Utils {
 VulkanTexture::VulkanTexture(const TextureSpecification& specification, const std::filesystem::path& filepath)
     : m_Specification(specification), m_Path(filepath)
 {
-    auto device = VulkanContext::Get()->GetCurrentDevice();
+    auto vkDevice = VulkanContext::Get()->GetDevice();
+    auto device = vkDevice->GetVulkanDevice();
+    VkCommandBuffer commandBuffer = vkDevice->GetCommandBuffer(true);
+    auto physicalDevice = VulkanContext::Get()->GetPhysicalDevice();
 
     Utils::ValidateSpecification(specification);
+
+    m_ImageData = ToBufferFromFile(filepath, m_Specification.Width, m_Specification.Height);
 
     // 在设备上创建最优分块目标图像
     VkImageCreateInfo imageInfo{};
@@ -46,7 +50,52 @@ VulkanTexture::VulkanTexture(const TextureSpecification& specification, const st
 
     VK_CHECK_RESULT(vkCreateImage(device, &imageInfo, nullptr, &m_Image));
 
-    ToBufferFromFile();
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingMemory;
+
+    VulkanBuffer buffer;
+    buffer.CreateBuffer(m_ImageData.Size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingMemory);
+    buffer.Allocate(m_ImageData.Data, m_ImageData.Size, stagingMemory);
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(device, m_Image, &memRequirements);
+
+    physicalDevice->GetMemoryProperties();
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = physicalDevice->GetMemoryTypeIndex(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VK_CHECK_RESULT(vkAllocateMemory(device, &allocInfo, nullptr, &m_DeviceMemory));
+
+    vkBindImageMemory(device, m_Image, m_DeviceMemory, 0);
+
+    TransitionImageLayout(m_Image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = { 0, 0, 0 };
+    region.imageExtent = {
+        m_Specification.Width,
+        m_Specification.Height,
+        1
+    };
+
+    vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+    vkDevice->FlushCommandBuffer(commandBuffer);
+
+    TransitionImageLayout(m_Image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vkDestroyBuffer(device, stagingBuffer, nullptr);
+    vkFreeMemory(device, stagingMemory, nullptr);
 
     CreateTextureImageView();
     CreateTextureSampler();
@@ -111,76 +160,6 @@ void VulkanTexture::CreateTextureSampler()
     VK_CHECK_RESULT(vkCreateSampler(device, &samplerInfo, nullptr, &m_Sampler));
 }
 
-void VulkanTexture::ToBufferFromFile()
-{
-    auto device = VulkanContext::Get()->GetCurrentDevice();
-    auto vkDevice = VulkanContext::Get()->GetDevice();
-    auto physicalDevice = VulkanContext::Get()->GetPhysicalDevice();
-
-    int width, height, channels;
-
-    // 读取图片
-    // TODO: 这里应该根据具体的格式选择合适的格式
-    stbi_uc* pixels = stbi_load(m_Path.string().c_str(), &width, &height, &channels, STBI_rgb_alpha);
-    m_Size = width * height * 4;
-
-    CORE_ASSERT(pixels);
-
-    m_Specification.Width = width;
-    m_Specification.Height = height;
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingMemory;
-
-    Buffer buffer;
-    buffer.CreateBuffer(m_Size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingMemory);
-    buffer.Allocate(pixels, m_Size, stagingMemory);
-
-    // 释放以加载的图片
-    stbi_image_free(pixels);
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device, m_Image, &memRequirements);
-
-    physicalDevice->GetMemoryProperties();
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = physicalDevice->GetMemoryTypeIndex(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    VK_CHECK_RESULT(vkAllocateMemory(device, &allocInfo, nullptr, &m_DeviceMemory));
-
-    vkBindImageMemory(device, m_Image, m_DeviceMemory, 0);
-
-    TransitionImageLayout(m_Image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-    VkCommandBuffer commandBuffer = vkDevice->GetCommandBuffer(true);
-
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-    region.imageOffset = { 0, 0, 0 };
-    region.imageExtent = {
-        m_Specification.Width,
-        m_Specification.Height,
-        1
-    };
-
-    vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-    vkDevice->FlushCommandBuffer(commandBuffer);
-
-    TransitionImageLayout(m_Image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    vkDestroyBuffer(device, stagingBuffer, nullptr);
-    vkFreeMemory(device, stagingMemory, nullptr);
-}
-
 void VulkanTexture::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) 
 {
     auto device = VulkanContext::Get()->GetDevice();
@@ -231,4 +210,48 @@ void VulkanTexture::TransitionImageLayout(VkImage image, VkFormat format, VkImag
     );
 
     device->FlushCommandBuffer(commandBuffer);
+}
+
+Buffer VulkanTexture::ToBufferFromFile(const std::filesystem::path& path, uint32_t& outWidth, uint32_t& outHeight)
+{
+    std::string pathString = path.string();
+
+    int width, height, channels;
+    void* tmp;
+    size_t size = 0;
+
+    if (stbi_is_hdr(pathString.c_str()))
+    {
+        tmp = stbi_loadf(pathString.c_str(), &width, &height, &channels, 4);
+        if (tmp)
+        {
+            size = width * height * 4 * sizeof(float);
+        }
+    }
+    else
+    {
+        //stbi_set_flip_vertically_on_load(1);
+        tmp = stbi_load(pathString.c_str(), &width, &height, &channels, 4);
+        if (tmp)
+        {
+            size = width * height * 4;
+        }
+    }
+
+    if (!tmp)
+    {
+        return {};
+    }
+
+    Buffer imageBuffer;
+
+    CORE_ASSERT(size > 0);
+    imageBuffer.Data = new uint8_t[size]; // avoid `malloc+delete[]` mismatch.
+    imageBuffer.Size = size;
+    memcpy(imageBuffer.Data, tmp, size);
+    stbi_image_free(tmp);
+
+    outWidth = width;
+    outHeight = height;
+    return imageBuffer;
 }

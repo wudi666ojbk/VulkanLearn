@@ -3,7 +3,7 @@
 
 #include "Renderer/VulkanContext.h"
 
-void Buffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
+void VulkanBuffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
 {
 	// TODO：你应该交给一个专门的类来处理缓冲区的创建和分配
 	auto device = VulkanContext::Get()->GetCurrentDevice();
@@ -31,7 +31,7 @@ void Buffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryP
 	vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
 
-void Buffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+void VulkanBuffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
 	auto device = VulkanContext::Get()->GetDevice();
 	auto commandPool = VulkanContext::Get()->GetSwapChain().GetCurrentDrawCommandPool();
@@ -69,7 +69,7 @@ void Buffer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize siz
 	vkFreeCommandBuffers(device->GetVulkanDevice(), commandPool, 1, &commandBuffer);
 }
 
-void Buffer::Allocate(const void* dstdata, VkDeviceSize size, VkDeviceMemory memory)
+void VulkanBuffer::Allocate(const void* dstdata, VkDeviceSize size, VkDeviceMemory memory)
 {
 	auto device = VulkanContext::Get()->GetCurrentDevice();
 	void* data;
