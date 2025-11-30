@@ -16,6 +16,8 @@
 #include <stdexcept>
 #include <filesystem>
 
+#include <unordered_map>
+
 #include <set>
 
 #include "Base/Base.h"
