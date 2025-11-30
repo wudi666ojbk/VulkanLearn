@@ -6,10 +6,10 @@
 class VulkanVertexBuffer : public VulkanBuffer
 {
 public:
-    VulkanVertexBuffer();
+    VulkanVertexBuffer(void* data, uint64_t size);
     ~VulkanVertexBuffer();
 
-    static Ref<VulkanVertexBuffer> Create();
+    static Ref<VulkanVertexBuffer> Create(void* data, uint64_t size);
     void Shutdown();
 
     virtual VkBuffer GetVulkanBuffer() const { return m_VertexBuffer; }

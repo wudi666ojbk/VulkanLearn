@@ -27,8 +27,8 @@ void VulkanRenderer::Init(Ref<VulkanPipeline> pipeline)
 
 	s_Data = new VulkanRendererData();
 
-	s_Data->VertexBuffer = VulkanVertexBuffer::Create();
-	s_Data->IndexBuffer = VulkanIndexBuffer::Create();
+	s_Data->VertexBuffer = VulkanVertexBuffer::Create((void*)vertices.data(), sizeof(vertices[0]) * vertices.size());
+	s_Data->IndexBuffer = VulkanIndexBuffer::Create((void*)indices.data(), indices.size() * sizeof(indices[0]));
 	s_Data->UniformBuffer = VulkanUniformBuffer::Create(); 
 
 	std::filesystem::path filePath = "textures/texture.jpg";

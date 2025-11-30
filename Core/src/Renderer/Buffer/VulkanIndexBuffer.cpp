@@ -3,26 +3,22 @@
 
 #include "Renderer/VulkanContext.h"
 
-#include "Data/Vertex.h"
-
-VulkanIndexBuffer::VulkanIndexBuffer()
+VulkanIndexBuffer::VulkanIndexBuffer(void* data, uint64_t size)
+    : m_Size(size)
 {
-    auto device = VulkanContext::Get()->GetCurrentDevice();
+    m_LocalData = Buffer::Copy(data, size);
 
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    auto device = VulkanContext::Get()->GetCurrentDevice();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-    CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+    CreateBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
-    void* data;
-    vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data(), (size_t)bufferSize);
-    vkUnmapMemory(device, stagingBufferMemory);
+    Allocate(data, size, stagingBufferMemory);
 
-    CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_IndexBuffer, m_IndexBufferMemory);
+    CreateBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_IndexBuffer, m_IndexBufferMemory);
 
-    CopyBuffer(stagingBuffer, m_IndexBuffer, bufferSize);
+    CopyBuffer(stagingBuffer, m_IndexBuffer, size);
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
@@ -36,7 +32,7 @@ VulkanIndexBuffer::~VulkanIndexBuffer()
     vkFreeMemory(device, m_IndexBufferMemory, nullptr);
 }
 
-Ref<VulkanIndexBuffer> VulkanIndexBuffer::Create()
+Ref<VulkanIndexBuffer> VulkanIndexBuffer::Create(void* data, uint64_t size)
 {
-    return CreateRef<VulkanIndexBuffer>();
+    return CreateRef<VulkanIndexBuffer>(data, size);
 }
