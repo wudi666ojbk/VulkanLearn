@@ -24,7 +24,9 @@ project "Core"
 	}
 	defines
 	{
-		"GLFW_INCLUDE_NONE"
+		"GLFW_INCLUDE_NONE",
+		"GLM_ENABLE_EXPERIMENTAL",
+		"GLM_FORCE_DEPTH_ZERO_TO_ONE",
 	}
 	includedirs
 	{
@@ -33,7 +35,8 @@ project "Core"
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.VulkanSDK}",
-		"%{IncludeDir.stb_image}"
+		"%{IncludeDir.stb_image}",
+		"%{IncludeDir.tinyobjloader}"
 	}
 	links
 	{

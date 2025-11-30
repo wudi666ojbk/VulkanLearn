@@ -6,6 +6,7 @@ IncludeDir["glm"] = "%{wks.location}/vendor/glm"
 IncludeDir["GLFW"] = "%{wks.location}/vendor/GLFW/include"
 IncludeDir["VulkanSDK"] = "%{VULKAN_SDK}/Include"
 IncludeDir["stb_image"] = "%{wks.location}/vendor/stb/include"
+IncludeDir["tinyobjloader"] = "%{wks.location}/vendor/tinyobjloader"
 
 LibraryDir = {}
 LibraryDir["VulkanSDK"] = "%{VULKAN_SDK}/Lib"
