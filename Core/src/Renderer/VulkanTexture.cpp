@@ -7,6 +7,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include <glm\gtc\integer.hpp>
+
 namespace Utils {
     static bool ValidateSpecification(const TextureSpecification& specification)
     {
@@ -29,6 +31,7 @@ VulkanTexture::VulkanTexture(const TextureSpecification& specification, const st
 
     Utils::ValidateSpecification(specification);
 
+    // stb_image处理图像数据
     m_ImageData = ToBufferFromFile(filepath, m_Specification.Width, m_Specification.Height);
 
     // 在设备上创建最优分块目标图像
@@ -37,13 +40,13 @@ VulkanTexture::VulkanTexture(const TextureSpecification& specification, const st
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
     imageInfo.extent = { m_Specification.Width, m_Specification.Height, 1 };
     imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
     imageInfo.arrayLayers = 1;
+    imageInfo.mipLevels = GetMipLevelCount();
     // TODO: 这里应该根据具体的格式选择合适的格式
     imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
     imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.flags = 0; // Optional
@@ -99,6 +102,7 @@ VulkanTexture::VulkanTexture(const TextureSpecification& specification, const st
 
     CreateTextureImageView();
     CreateTextureSampler();
+    GenerateMips();
 }
 
 VulkanTexture::~VulkanTexture()
@@ -115,6 +119,116 @@ VulkanTexture::~VulkanTexture()
 Ref<VulkanTexture> VulkanTexture::Create(const TextureSpecification& specification, const std::filesystem::path& filepath)
 {
 	return CreateRef<VulkanTexture>(specification, filepath);
+}
+
+void VulkanTexture::GenerateMips()
+{
+    VkImageMemoryBarrier barrier = {};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.image = m_Image;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    VkImageSubresourceRange subresourceRange = {};
+    subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subresourceRange.levelCount = 1;
+    subresourceRange.layerCount = 1;
+    barrier.subresourceRange = subresourceRange;
+
+    int32_t mipWidth = m_Specification.Width;
+    int32_t mipHeight = m_Specification.Height;
+
+    VkCommandBuffer commandBuffer = VulkanContext::Get()->GetDevice()->GetCommandBuffer(true);
+
+    // 先将基础 mip 级别 (level 0) 从 SHADER_READ_ONLY 转换为 TRANSFER_SRC 布局
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+    vkCmdPipelineBarrier(commandBuffer,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+        0, nullptr,
+        0, nullptr,
+        1, &barrier);
+
+    auto mipLevels = GetMipLevelCount();
+    for (uint32_t i = 1; i < mipLevels; i++)
+    {
+        // 首先确保目标 mip 级别处于正确的布局
+        barrier.subresourceRange.baseMipLevel = i;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        vkCmdPipelineBarrier(commandBuffer,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
+
+        VkImageBlit blit = {};
+        blit.srcOffsets[0] = { 0, 0, 0 };
+        blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.srcSubresource.mipLevel = i - 1;
+        blit.srcSubresource.baseArrayLayer = 0;
+        blit.srcSubresource.layerCount = 1;
+
+        blit.dstOffsets[0] = { 0, 0, 0 };
+        blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
+        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.dstSubresource.mipLevel = i;
+        blit.dstSubresource.baseArrayLayer = 0;
+        blit.dstSubresource.layerCount = 1;
+
+        vkCmdBlitImage(commandBuffer,
+            m_Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1, &blit,
+            VK_FILTER_LINEAR);
+
+        // 将刚刚写入的 mip 级别转换为 TRANSFER_SRC_OPTIMAL 布局，为下一次迭代做准备
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        vkCmdPipelineBarrier(commandBuffer,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
+
+        if (mipWidth > 1)
+            mipWidth /= 2;
+        if (mipHeight > 1)
+            mipHeight /= 2;
+    }
+
+    // Transition all mips from transfer to shader read
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = mipLevels;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(commandBuffer,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+        0, nullptr,
+        0, nullptr,
+        1, &barrier);
+
+    VulkanContext::Get()->GetDevice()->FlushCommandBuffer(commandBuffer);
+}
+
+uint32_t VulkanTexture::GetMipLevelCount() const
+{
+    return (uint32_t)glm::floor(glm::log2(glm::min(m_Specification.Width, m_Specification.Height))) + 1;
 }
 
 void VulkanTexture::CreateTextureImageView()

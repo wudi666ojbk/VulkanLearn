@@ -6,6 +6,8 @@
 #include "Data/Vertex.h"
 
 #include "VulkanTexture.h"
+
+#define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
 struct VulkanRendererData

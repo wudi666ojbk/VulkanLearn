@@ -7,6 +7,7 @@
 
 struct TextureSpecification
 {
+	// TODO:你应该在此处添加是否生成mipmap的选项
 	uint32_t Width = 1;
 	uint32_t Height = 1;
 };
@@ -19,6 +20,9 @@ public:
 	~VulkanTexture();
 
 	static Ref<VulkanTexture> Create(const TextureSpecification& specification, const std::filesystem::path& filepath);
+
+	void GenerateMips();
+	uint32_t GetMipLevelCount() const;
 
 	VkImage GetImage() const { return m_Image; }
 	VkImageView GetImageView() const { return m_ImageView; }
